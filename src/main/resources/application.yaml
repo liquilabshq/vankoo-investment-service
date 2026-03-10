@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: investment-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.configuration.strategy.SnakeCaseWithPluralizedTablePhysicalNamingStrategy
+    open-in-view: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+        format_sql: true
+
+documentation:
+  application:
+    title: @project.name@
+    description: @project.description@
+    version: @project.version@
+
+authorization:
+  jwt:
+    secret: ${JWT_SECRET:default_secret_for_local_dev}
+    expiration:
+      days: ${JWT_EXPIRATION_DAYS}
+
+scalar:
+  enabled: true
+  theme: kepler

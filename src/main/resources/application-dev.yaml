@@ -1,0 +1,36 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@${INVESTMENT_DB_HOST:localhost}:${INVESTMENT_DB_PORT:1521}/${INVESTMENT_DB_NAME:FREEPDB1}
+    username: ${IAM_DB_USERNAME:admin}
+    password: ${IAM_DB_PASSWORD:password}
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: ${KAFKA_HOST:localhost}:${KAFKA_EXTERNAL_PORT:9092}
+          auto-create-topics: true
+          producer-properties:
+            acks: all
+            retries: 3
+            enable.idempotence: true
+      bindings:
+        iam-out-0:
+          destination: vankoo.iam.events
+          content-type: application/json
+
+eureka:
+  instance:
+    prefer-ip-address: false
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${DISCOVERY_SERVER_URL:http://localhost:8761/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+       include: "health,info"
