@@ -22,7 +22,6 @@ import java.util.List;
 import static java.math.BigDecimal.ZERO;
 
 @Entity
-@Table(name = "auctions")
 @Getter
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
