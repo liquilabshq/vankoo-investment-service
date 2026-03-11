@@ -18,7 +18,7 @@ spring:
             enable.idempotence: true
       bindings:
         iam-out-0:
-          destination: vankoo.iam.events
+          destination: vankoo.investment.events
           content-type: application/json
 
 eureka:
