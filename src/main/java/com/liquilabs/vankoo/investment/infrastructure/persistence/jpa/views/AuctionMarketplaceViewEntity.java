@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @With
-public class AuctionMarketplaceView {
+public class AuctionMarketplaceViewEntity {
 
     @Id
     private String auctionId;
@@ -33,6 +33,7 @@ public class AuctionMarketplaceView {
     private String payerRuc;
     private String payerName;
     private LocalDateTime dueDate;
+
 
     // Datos extraídos del Profile Service (en caso se implemente)
     //private String mypeName;

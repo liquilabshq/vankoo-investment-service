@@ -21,7 +21,6 @@ public record AuctionMarketplaceView(
 
         // Datos proyectados
         String mypeId,
-        String mypeName,
-        String mypeSector,
+        //String mypeName,
         ScoreGrade riskGrade
 ) {}
