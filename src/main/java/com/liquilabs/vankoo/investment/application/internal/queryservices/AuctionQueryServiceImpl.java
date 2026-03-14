@@ -38,11 +38,8 @@ public class AuctionQueryServiceImpl implements AuctionQueryService {
 
     @Override
     public List<AuctionMarketplaceView> handle(GetMarketplaceAuctionsQuery query) {
-        var activeStatuses = List.of(
-                AuctionStatus.PUBLISHED.name(),
-                AuctionStatus.FUNDING.name()
-        );
-        var infraViews = viewRepository.findByStatusIn(activeStatuses);
+
+        var infraViews = viewRepository.findByStatusIn(AuctionStatus.marketplaceActiveStatuses());
 
         return infraViews.stream().map(infraView -> new AuctionMarketplaceView(
                 infraView.getAuctionId(),
