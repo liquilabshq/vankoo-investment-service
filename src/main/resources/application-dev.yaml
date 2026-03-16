@@ -17,14 +17,16 @@ spring:
             retries: 3
             enable.idempotence: true
       bindings:
-        iam-out-0:
-          destination: vankoo.investment.events
+        processInvoicingOcrEvent-in-0:
+          destination: invoicing.invoice-ocr-processed
+          group: investment-service-group
           content-type: application/json
 
 eureka:
   instance:
     prefer-ip-address: false
   client:
+    enabled: false
     register-with-eureka: true
     fetch-registry: true
     service-url:
