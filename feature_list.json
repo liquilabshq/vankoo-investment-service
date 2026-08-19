@@ -1,0 +1,39 @@
+{
+  "project": "vankoo-investment-service",
+  "description": "Servicio de inversiones Vankoo basado en Spring Boot, Oracle, Kafka, CQRS y eventos de dominio.",
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_reviewer_approval_to_close": true,
+    "require_tests_to_close": true,
+    "valid_status": ["pending", "in_progress", "done", "blocked"]
+  },
+  "notes": "La verificación mínima es `mvn test`. Consulta docs/verification.md y CHECKPOINTS.md antes de cerrar una feature.",
+  "features": [
+    {
+      "id": 1,
+      "name": "add-auction-domain-test-baseline",
+      "title": "Agregar cobertura automatizada del agregado Auction",
+      "description": "El servicio no contiene pruebas automatizadas. Crear una base de pruebas unitarias para las invariantes de Auction antes de extender comandos, proyecciones o eventos.",
+      "acceptance": [
+        "Existen pruebas bajo src/test que cubren la creación de Auction y su estado inicial PENDING_VERIFICATION_RISK.",
+        "Las pruebas cubren que addInvestment rechaza un monto menor a 500.00 y que una inversión válida actualiza el financiamiento.",
+        "Las pruebas cubren la emisión de PartitionAddedEvent y AuctionFullyFundedEvent al completar el monto objetivo.",
+        "mvn test termina correctamente."
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "name": "complete-auction-read-projections",
+      "title": "Completar las proyecciones de lectura de eventos de Auction",
+      "description": "Auction ya emite PartitionAddedEvent y AuctionFullyFundedEvent, pero solo AuctionCreatedEvent tiene un handler de proyección. Implementar las proyecciones que el marketplace necesite, previa confirmación del modelo de lectura esperado.",
+      "acceptance": [
+        "La decisión de qué campos y estados expone el marketplace queda documentada en progress.md antes de implementar.",
+        "Cada evento de dominio usado para actualizar la proyección tiene un handler en application/internal/eventhandlers.",
+        "Los handlers actualizan únicamente la proyección de lectura y no contienen reglas de negocio del agregado.",
+        "Se agregan pruebas para cada actualización de proyección y mvn test termina correctamente."
+      ],
+      "status": "blocked"
+    }
+  ]
+}
