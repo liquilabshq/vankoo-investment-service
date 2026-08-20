@@ -1,7 +1,7 @@
-package com.liquilabs.vankoo.investment.interfaces.events;
+package com.liquilabs.vankoo.investment.interfaces.events.consumers;
 
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
-import com.liquilabs.vankoo.investment.interfaces.events.resources.InvoiceOcrProcessedIntegrationEvent;
+import com.liquilabs.vankoo.investment.interfaces.events.resources.InvoiceEligibleForFundingIntegrationEvent;
 import com.liquilabs.vankoo.investment.interfaces.events.transform.InvoicingOcrEventToCommandAssembler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,20 +21,27 @@ public class InvoicingOcrEventConsumer {
     }
 
     @Bean
-    public Consumer<InvoiceOcrProcessedIntegrationEvent> processInvoicingOcrEvent() {
+    public Consumer<InvoiceEligibleForFundingIntegrationEvent> processInvoiceEligibleForFunding() {
         return event -> {
-            LOGGER.info("Evento OCR recibido desde Invoicing. Factura ID: {}", event.invoiceId());
+            LOGGER.info(
+                    "Factura elegible para financiamiento recibida desde Invoicing. Factura ID: {}",
+                    event.invoiceId());
 
             try {
                 var command = InvoicingOcrEventToCommandAssembler.toCommandFromEvent(event);
                 var auctionId = auctionCommandService.handle(command);
 
                 auctionId.ifPresentOrElse(
-                        id -> LOGGER.info("[Kafka] Subasta creada exitosamente. ID: {}", id.uuid()),
+                        id -> LOGGER.info("[Kafka] Subasta creada o ya existente. ID: {}", id.uuid()),
                         () -> LOGGER.error("[Kafka] Falló la creación de subasta para la factura: {}", event.invoiceId())
                 );
+            } catch (IllegalArgumentException e) {
+                LOGGER.error("[Kafka] Evento inválido, se descarta. invoiceId={}, motivo: {}",
+                        event.invoiceId(), e.getMessage());
             } catch (Exception e) {
-                LOGGER.error("[Kafka] Error crítico al procesar el evento de Invoicing: {}", e.getMessage(), e);
+                LOGGER.error("[Kafka] Error inesperado al procesar el evento de Invoicing (se reintentará): {}",
+                        e.getMessage(), e);
+                throw e;
             }
         };
     }

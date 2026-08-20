@@ -32,7 +32,7 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
 
     @Embedded
     @AttributeOverrides({
-            @AttributeOverride(name = "uuid", column = @Column(name = "invoice_id"))
+            @AttributeOverride(name = "uuid", column = @Column(name = "invoice_id", unique = true))
     })
     private InvoiceId invoiceId;
 
