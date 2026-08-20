@@ -191,7 +191,7 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         return new Percentage(percentageValue);
     }
 
-    public void addInvestment(UserId investorId, Money amount, Percentage returnRate, String transactionId) {
+    public Partition addInvestment(UserId investorId, Money amount, Percentage returnRate, String transactionId) {
         // Regla 1: Validar el ticket mínimo (Ejemplo: S/ 500)
         if (amount.amount().compareTo(MINIMUM_INVESTMENT_AMOUNT) < 0) {
             throw new IllegalArgumentException("El monto de inversión debe ser de al menos " + MINIMUM_INVESTMENT_AMOUNT);
@@ -233,6 +233,8 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
             this.status = AuctionStatus.FULLY_FUNDED;
             this.registerEvent(new AuctionFullyFundedEvent(this.id.uuid()));
         }
+
+        return newPartition;
     }
 
     public boolean isFunded() {

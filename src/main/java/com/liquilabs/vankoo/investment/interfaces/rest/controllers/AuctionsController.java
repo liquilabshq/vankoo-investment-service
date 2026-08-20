@@ -2,12 +2,16 @@ package com.liquilabs.vankoo.investment.interfaces.rest.controllers;
 
 import com.liquilabs.vankoo.investment.domain.model.queries.AuctionMarketplaceView;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetMarketplaceAuctionsQuery;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
 import com.liquilabs.vankoo.investment.interfaces.rest.resources.CreateAuctionResource;
+import com.liquilabs.vankoo.investment.interfaces.rest.resources.CreateInvestmentResource;
 import com.liquilabs.vankoo.investment.interfaces.rest.transform.CreateAuctionCommandFromResourceAssembler;
+import com.liquilabs.vankoo.investment.interfaces.rest.transform.CreatePartitionCommandFromResourceAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +43,21 @@ public class AuctionsController {
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(auctionId.get().uuid());
+    }
+
+    @PostMapping("/{auctionId}/investments")
+    @Operation(summary = "Invertir en una subasta")
+    public ResponseEntity<String> invest(@PathVariable String auctionId,
+                                         @Valid @RequestBody CreateInvestmentResource resource) {
+        var command = CreatePartitionCommandFromResourceAssembler.toCommandFromResource(
+                new AuctionId(auctionId), resource);
+        var partitionId = auctionCommandService.handle(command);
+
+        if (partitionId.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(partitionId.get().uuid());
     }
 
     @GetMapping("/marketplace")

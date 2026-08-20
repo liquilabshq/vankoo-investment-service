@@ -1,8 +1,10 @@
 package com.liquilabs.vankoo.investment.application.internal.commandservices;
 
 import com.liquilabs.vankoo.investment.domain.model.aggregates.Auction;
+import com.liquilabs.vankoo.investment.domain.model.commands.AddPartitionCommand;
 import com.liquilabs.vankoo.investment.domain.model.commands.CreateAuctionCommand;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.PartitionId;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.repositories.AuctionRepository;
 import jakarta.transaction.Transactional;
@@ -48,5 +50,39 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
         auctionRepository.save(auction);
 
         return Optional.of(auction.getId());
+    }
+
+    @Override
+    @Transactional
+    public Optional<PartitionId> handle(AddPartitionCommand command) {
+        var auction = auctionRepository.findByIdForUpdate(command.auctionId());
+
+        if (auction.isEmpty()) {
+            return Optional.empty();
+        }
+
+        var aggregate = auction.get();
+
+        var existing = aggregate.getPartitions().stream()
+                .filter(partition -> command.transactionId() != null
+                        && command.transactionId().equals(partition.getInvestmentTransactionId()))
+                .findFirst();
+
+        if (existing.isPresent()) {
+            LOGGER.info("Participación ya registrada para la transacción {}, se reutiliza. ID: {}",
+                    command.transactionId(), existing.get().getId().uuid());
+            return Optional.of(existing.get().getId());
+        }
+
+        var partition = aggregate.addInvestment(
+                command.investorId(),
+                command.amount(),
+                command.returnRate(),
+                command.transactionId()
+        );
+
+        auctionRepository.save(aggregate);
+
+        return Optional.of(partition.getId());
     }
 }
