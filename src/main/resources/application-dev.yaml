@@ -17,10 +17,12 @@ spring:
             retries: 3
             enable.idempotence: true
       bindings:
-        processInvoicingOcrEvent-in-0:
-          destination: invoicing.invoice-ocr-processed
+        processInvoiceEligibleForFunding-in-0:
+          destination: invoicing.invoice-eligible-for-funding
           group: investment-service-group
           content-type: application/json
+          consumer:
+            max-attempts: 3
 
 eureka:
   instance:
