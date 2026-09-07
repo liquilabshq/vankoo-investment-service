@@ -1,18 +1,25 @@
 package com.liquilabs.vankoo.investment.application.internal.commandservices;
 
+import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
 import com.liquilabs.vankoo.investment.domain.model.aggregates.Auction;
-import com.liquilabs.vankoo.investment.domain.model.commands.AddPartitionCommand;
-import com.liquilabs.vankoo.investment.domain.model.commands.CreateAuctionCommand;
+import com.liquilabs.vankoo.investment.domain.model.commands.*;
+import com.liquilabs.vankoo.investment.domain.model.entities.AuctionFinancialQuote;
+import com.liquilabs.vankoo.investment.domain.model.entities.Partition;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
-import com.liquilabs.vankoo.investment.domain.model.valueobjects.PartitionId;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.QuoteStatus;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
+import com.liquilabs.vankoo.investment.domain.services.AuctionPricingCalculator;
+import com.liquilabs.vankoo.investment.infrastructure.configuration.PricingProperties;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.repositories.AuctionRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class AuctionCommandServiceImpl implements AuctionCommandService {
@@ -20,69 +27,167 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuctionCommandServiceImpl.class);
 
     private final AuctionRepository auctionRepository;
+    private final AuctionPricingCalculator pricingCalculator;
+    private final PricingProperties pricingProperties;
+    private final Clock clock;
 
-    public AuctionCommandServiceImpl(AuctionRepository auctionRepository) {
+    public AuctionCommandServiceImpl(
+            AuctionRepository auctionRepository,
+            AuctionPricingCalculator pricingCalculator,
+            PricingProperties pricingProperties,
+            Clock clock
+    ) {
         this.auctionRepository = auctionRepository;
+        this.pricingCalculator = pricingCalculator;
+        this.pricingProperties = pricingProperties;
+        this.clock = clock;
     }
 
     @Override
     @Transactional
-    public Optional<AuctionId> handle(CreateAuctionCommand command) {
+    public AuctionId handle(CreateAuctionCommand command) {
         var existing = auctionRepository.findByInvoiceId(command.invoiceId());
-
         if (existing.isPresent()) {
-            LOGGER.info("Subasta ya existente para la factura {}, se reutiliza. ID: {}",
+            LOGGER.info("Auction already exists for invoice {}. Reusing {}",
                     command.invoiceId().uuid(), existing.get().getId().uuid());
-            return Optional.of(existing.get().getId());
+            return existing.get().getId();
         }
 
         var auction = new Auction(
                 command.invoiceId(),
                 command.mypeId(),
                 command.invoiceAmount(),
-                command.riskScore(),
                 command.greenCertified(),
+                command.payerRuc(),
+                command.payerName(),
                 command.dueDate()
         );
-
-        auction.registerAuctionCreatedEvent(command.payerRuc(), command.payerName());
-
+        auction.registerAuctionCreatedEvent();
         auctionRepository.save(auction);
-
-        return Optional.of(auction.getId());
+        return auction.getId();
     }
 
     @Override
     @Transactional
-    public Optional<PartitionId> handle(AddPartitionCommand command) {
-        var auction = auctionRepository.findByIdForUpdate(command.auctionId());
+    public Auction handle(EvaluateAuctionCommand command) {
+        Auction auction = locked(command.auctionId());
+        auction.evaluate(
+                command.assessmentId(),
+                command.riskGrade(),
+                command.fullBalanceOutstanding(),
+                command.assessedAt()
+        );
+        return auctionRepository.save(auction);
+    }
 
-        if (auction.isEmpty()) {
-            return Optional.empty();
+    @Override
+    @Transactional
+    public AuctionFinancialQuote handle(CreateFinancialQuoteCommand command) {
+        Auction auction = locked(command.auctionId());
+        if (auction.getStatus() != AuctionStatus.DRAFT
+                || !auction.isFullBalanceOutstandingConfirmed()
+                || auction.getFundableAmount() == null) {
+            throw new IllegalStateException("Auction must be evaluated before it can be quoted");
         }
+        var now = clock.instant();
+        LocalDate valuationDate = LocalDate.now(clock.withZone(pricingProperties.pricingZone()));
+        var calculation = pricingCalculator.calculate(
+                auction.getFundableAmount(),
+                auction.getRiskScore().grade(),
+                valuationDate,
+                auction.getDueDate()
+        );
+        AuctionFinancialQuote quote = auction.createQuote(calculation, now, pricingProperties.quoteValidity());
+        auctionRepository.save(auction);
+        return quote;
+    }
 
-        var aggregate = auction.get();
+    @Override
+    @Transactional
+    public Auction handle(AcceptFinancialQuoteCommand command) {
+        Auction auction = locked(command.auctionId());
+        auction.acceptQuote(
+                command.quoteId(),
+                clock.instant(),
+                pricingProperties.fundingWindow(),
+                pricingProperties.settlementBuffer(),
+                pricingProperties.pricingZone()
+        );
+        auction.acceptedQuote();
+        return auctionRepository.save(auction);
+    }
 
-        var existing = aggregate.getPartitions().stream()
-                .filter(partition -> command.transactionId() != null
-                        && command.transactionId().equals(partition.getInvestmentTransactionId()))
-                .findFirst();
-
-        if (existing.isPresent()) {
-            LOGGER.info("Participación ya registrada para la transacción {}, se reutiliza. ID: {}",
-                    command.transactionId(), existing.get().getId().uuid());
-            return Optional.of(existing.get().getId());
-        }
-
-        var partition = aggregate.addInvestment(
+    @Override
+    @Transactional
+    public Partition handle(AddPartitionCommand command) {
+        Auction auction = locked(command.auctionId());
+        Partition partition = auction.addInvestment(
                 command.investorId(),
                 command.amount(),
-                command.returnRate(),
-                command.transactionId()
+                pricingProperties.minimumFor(command.amount().currency()),
+                command.transactionId(),
+                clock.instant()
         );
+        auctionRepository.save(auction);
+        return partition;
+    }
 
-        auctionRepository.save(aggregate);
+    @Override
+    @Transactional
+    public Auction handle(CloseAuctionCommand command) {
+        Auction auction = locked(command.auctionId());
+        auction.close(command.transactionId(), clock.instant());
+        auction.acceptedQuote();
+        return auctionRepository.save(auction);
+    }
 
-        return Optional.of(partition.getId());
+    @Override
+    @Transactional
+    public Auction handle(CancelAuctionCommand command) {
+        Auction auction = locked(command.auctionId());
+        auction.cancel(command.reason(), clock.instant(), command.internal());
+        if (auction.getAcceptedQuoteId() != null) {
+            auction.acceptedQuote();
+        }
+        return auctionRepository.save(auction);
+    }
+
+    @Override
+    @Transactional
+    public int expireDueAuctions() {
+        var now = clock.instant();
+        List<AuctionId> ids = auctionRepository.findIdsDueForExpiration(
+                List.of(AuctionStatus.PUBLISHED, AuctionStatus.FUNDING), now
+        );
+        int expired = 0;
+        for (AuctionId id : ids) {
+            Auction auction = locked(id);
+            if (auction.expireIfDue(now)) {
+                auctionRepository.save(auction);
+                expired++;
+            }
+        }
+        return expired;
+    }
+
+    @Override
+    @Transactional
+    public int expireDueQuotes() {
+        var now = clock.instant();
+        List<AuctionId> ids = auctionRepository.findIdsWithExpiredQuotes(
+                AuctionStatus.DRAFT, QuoteStatus.ACTIVE, now
+        );
+        int expired = 0;
+        for (AuctionId id : ids) {
+            Auction auction = locked(id);
+            expired += auction.expireQuotes(now);
+            auctionRepository.save(auction);
+        }
+        return expired;
+    }
+
+    private Auction locked(AuctionId auctionId) {
+        return auctionRepository.findByIdForUpdate(auctionId)
+                .orElseThrow(() -> new AuctionNotFoundException(auctionId.uuid()));
     }
 }

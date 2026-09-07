@@ -4,23 +4,28 @@ import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.ScoreGrade;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDate;
 
 public record AuctionMarketplaceView(
         String auctionId,
         String invoiceId,
-
-        // Datos de la subasta
+        String mypeId,
+        String payerRuc,
+        String payerName,
         BigDecimal targetAmount,
         BigDecimal currentFunding,
+        BigDecimal availableAmount,
+        BigDecimal progressPct,
         String currency,
-        BigDecimal discountRate,
+        BigDecimal investorTeaPct,
+        BigDecimal investorTermRatePct,
+        int quotedTermDays,
+        long daysToMaturity,
+        ScoreGrade riskGrade,
         AuctionStatus status,
-        LocalDateTime expiresAt,
-        boolean greenCertified,
-
-        // Datos proyectados
-        String mypeId,
-        //String mypeName,
-        ScoreGrade riskGrade
-) {}
+        LocalDate dueDate,
+        Instant expiresAt,
+        boolean greenCertified
+) {
+}

@@ -3,7 +3,7 @@ package com.liquilabs.vankoo.investment.domain.model.events;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 public record AuctionCreatedEvent(
         String auctionId,
@@ -12,7 +12,7 @@ public record AuctionCreatedEvent(
 
         String payerRuc,
         String payerName,
-        LocalDateTime dueDate,
+        LocalDate dueDate,
 
         BigDecimal invoiceAmount,
         String currency,
