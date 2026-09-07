@@ -4,6 +4,7 @@ import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Embeddable
 public record Money(
@@ -16,6 +17,11 @@ public record Money(
         }
         if (currency == null) {
             throw new IllegalArgumentException("Currency cannot be null");
+        }
+        try {
+            amount = amount.setScale(2, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException("Money supports at most two decimal places", e);
         }
     }
 
@@ -30,7 +36,7 @@ public record Money(
     }
 
     public Money multiply(BigDecimal factor) {
-        return new Money(this.amount.multiply(factor), this.currency);
+        return new Money(this.amount.multiply(factor).setScale(2, RoundingMode.HALF_UP), this.currency);
     }
 
     public boolean isGreaterThan(Money other) {

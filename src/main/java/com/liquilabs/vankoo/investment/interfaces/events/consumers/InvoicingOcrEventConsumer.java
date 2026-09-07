@@ -30,11 +30,7 @@ public class InvoicingOcrEventConsumer {
             try {
                 var command = InvoicingOcrEventToCommandAssembler.toCommandFromEvent(event);
                 var auctionId = auctionCommandService.handle(command);
-
-                auctionId.ifPresentOrElse(
-                        id -> LOGGER.info("[Kafka] Subasta creada o ya existente. ID: {}", id.uuid()),
-                        () -> LOGGER.error("[Kafka] Falló la creación de subasta para la factura: {}", event.invoiceId())
-                );
+                LOGGER.info("[Kafka] Subasta creada o ya existente. ID: {}", auctionId.uuid());
             } catch (IllegalArgumentException e) {
                 LOGGER.error("[Kafka] Evento inválido, se descarta. invoiceId={}, motivo: {}",
                         event.invoiceId(), e.getMessage());

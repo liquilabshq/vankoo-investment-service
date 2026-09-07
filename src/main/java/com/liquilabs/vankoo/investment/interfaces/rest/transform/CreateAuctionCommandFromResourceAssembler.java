@@ -10,8 +10,7 @@ public class CreateAuctionCommandFromResourceAssembler {
         return new CreateAuctionCommand(
                 new InvoiceId(resource.invoiceId()),
                 new UserId(resource.mypeId()),
-                new Money(resource.invoiceAmount(), Currency.valueOf(resource.currency())),
-                RiskScore.pendingEvaluation(),
+                new Money(resource.invoiceAmount(), Currency.valueOf(resource.currency().toUpperCase())),
                 resource.greenCertified(),
                 resource.payerRuc(),
                 resource.payerName(),

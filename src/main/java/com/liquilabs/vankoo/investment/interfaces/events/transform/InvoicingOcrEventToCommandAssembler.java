@@ -5,20 +5,18 @@ import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.InvoiceEligibleForFundingIntegrationEvent;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 public class InvoicingOcrEventToCommandAssembler {
-
-    private static final DateTimeFormatter ISO_DATE_TIME = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     public static CreateAuctionCommand toCommandFromEvent(InvoiceEligibleForFundingIntegrationEvent event) {
         return new CreateAuctionCommand(
                 new InvoiceId(requireNotBlank(event.invoiceId(), "InvoiceId")),
                 new UserId(requireNotBlank(event.mypeId(), "MypeId")),
                 new Money(requireNotNull(event.totalAmount(), "TotalAmount"), parseCurrency(event.currency())),
-                RiskScore.pendingEvaluation(),
                 false,
                 event.payerRuc(),
                 event.payerName(),
@@ -49,15 +47,20 @@ public class InvoicingOcrEventToCommandAssembler {
         }
     }
 
-    private static LocalDateTime parseDateTime(String raw, String field) {
+    private static LocalDate parseDateTime(String raw, String field) {
         String value = requireNotBlank(raw, field);
-        String normalized = value.trim().endsWith("Z")
-                ? value.trim().substring(0, value.trim().length() - 1)
-                : value.trim();
         try {
-            return LocalDateTime.parse(normalized, ISO_DATE_TIME);
-        } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException(field + " con formato inválido: " + raw, e);
+            return OffsetDateTime.parse(value, DateTimeFormatter.ISO_DATE_TIME).toLocalDate();
+        } catch (DateTimeParseException ignored) {
+            try {
+                return java.time.LocalDateTime.parse(value, DateTimeFormatter.ISO_DATE_TIME).toLocalDate();
+            } catch (DateTimeParseException ignoredAgain) {
+                try {
+                    return LocalDate.parse(value, DateTimeFormatter.ISO_DATE);
+                } catch (DateTimeParseException e) {
+                    throw new IllegalArgumentException(field + " con formato inválido: " + raw, e);
+                }
+            }
         }
     }
 }

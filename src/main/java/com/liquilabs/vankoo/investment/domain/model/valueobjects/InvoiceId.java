@@ -1,7 +1,10 @@
 package com.liquilabs.vankoo.investment.domain.model.valueobjects;
 
+import jakarta.persistence.Embeddable;
+
 import java.util.UUID;
 
+@Embeddable
 public record InvoiceId(String uuid) {
     public InvoiceId() {
         this(UUID.randomUUID().toString());
