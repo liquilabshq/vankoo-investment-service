@@ -6,7 +6,10 @@ import com.liquilabs.vankoo.investment.domain.model.commands.*;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionByIdQuery;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
+import com.liquilabs.vankoo.investment.domain.services.AuctionMarketplaceProjectionService;
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
+import com.liquilabs.vankoo.investment.infrastructure.messaging.outbox.OutboxEventRepository;
+import com.liquilabs.vankoo.investment.infrastructure.messaging.projection.AuctionLifecycleEventParser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -51,6 +54,15 @@ class AuctionFinancialFlowIntegrationTest {
 
     @Autowired
     private AuctionQueryService auctionQueryService;
+
+    @Autowired
+    private AuctionMarketplaceProjectionService projectionService;
+
+    @Autowired
+    private AuctionLifecycleEventParser eventParser;
+
+    @Autowired
+    private OutboxEventRepository outboxEventRepository;
 
     @Test
     void runsTheEvaluationQuoteAcceptanceAndInvestmentFlow() throws Exception {
@@ -116,6 +128,10 @@ class AuctionFinancialFlowIntegrationTest {
                 .andExpect(jsonPath("$.expectedGrossProfit").isNumber())
                 .andReturn().getResponse().getContentAsString();
         assertThat(objectMapper.readTree(investmentJson).has("returnRate")).isFalse();
+
+        outboxEventRepository.findByAggregateIdOrderBySequence(auctionId).stream()
+                .map(event -> eventParser.parse(event.getPayload()))
+                .forEach(projectionService::handle);
 
         String marketplaceJson = mockMvc.perform(get("/api/v1/auctions/marketplace"))
                 .andExpect(status().isOk())
