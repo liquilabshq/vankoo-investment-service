@@ -1,0 +1,117 @@
+{
+  "project": "vankoo-investment-service",
+  "description": "Servicio de inversiones Vankoo basado en Spring Boot, Oracle, Kafka, CQRS y eventos de dominio.",
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_reviewer_approval_to_close": true,
+    "require_tests_to_close": true,
+    "valid_status": ["pending", "in_progress", "done", "blocked"]
+  },
+  "notes": "La verificación mínima es `mvn test`. Consulta docs/verification.md y CHECKPOINTS.md antes de cerrar una feature.",
+  "features": [
+    {
+      "id": 1,
+      "name": "add-auction-domain-test-baseline",
+      "title": "Agregar cobertura automatizada del agregado Auction",
+      "description": "El servicio no contiene pruebas automatizadas. Crear una base de pruebas unitarias para las invariantes de Auction antes de extender comandos, proyecciones o eventos.",
+      "acceptance": [
+        "Existen pruebas bajo src/test que cubren la creación de Auction y su estado inicial PENDING_VERIFICATION_RISK.",
+        "Las pruebas cubren que addInvestment rechaza un monto menor a 500.00 y que una inversión válida actualiza el financiamiento.",
+        "Las pruebas cubren la emisión de PartitionAddedEvent y AuctionFullyFundedEvent al completar el monto objetivo.",
+        "mvn test termina correctamente."
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "name": "define-marketplace-read-model-boundary",
+      "title": "Definir el límite y contrato del read model Marketplace",
+      "description": "Decidir y documentar si AuctionMarketplaceViewEntity y GET /marketplace siguen siendo propiedad de investment-service o pasan a un microservicio de Marketplace. Definir los datos publicados, semántica de estados, consistencia eventual admitida, estrategia de replay y el contrato de consulta. Esta decisión antecede al reemplazo del listener local por una proyección Kafka.",
+      "acceptance": [
+        "La propiedad del read model, de su almacenamiento y del endpoint queda decidida y documentada en progress.md.",
+        "Se documentan campos, estados visibles, ordenamiento, filtros, paginación y tolerancia de frescura del Marketplace.",
+        "Se define cómo se reinicia o reconstruye la proyección sin mezclar eventos de dominio con contratos de integración.",
+        "Se identifica el consumidor, topic, clave de partición, versión y política de evolución de cada evento requerido."
+      ],
+      "status": "blocked"
+    },
+    {
+      "id": 3,
+      "name": "add-auction-expiration-lifecycle-event",
+      "title": "Modelar la expiración de Auction y AuctionExpiredEvent",
+      "description": "Completar el ciclo de vida de Auction con una transición de expiración ejecutada por el dueño del agregado. Registrar AuctionExpiredEvent de dominio solo cuando la transición sea válida; no derivarlo desde una proyección ni desde el adaptador Kafka.",
+      "acceptance": [
+        "La responsabilidad que detecta y dispara la expiración está definida y delega la transición al agregado Auction.",
+        "Auction valida la transición y registra AuctionExpiredEvent una única vez al expirar.",
+        "Las pruebas cubren expiración válida, ausencia de doble emisión y estados que no pueden expirar.",
+        "mvn test termina correctamente."
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "name": "define-versioned-auction-integration-event-contract",
+      "title": "Definir el contrato versionado de eventos de integración de Auction",
+      "description": "Diseñar el contrato congelado y versionable para AuctionCreated, PartitionAdded, AuctionFullyFunded y AuctionExpired. Los contratos de interfaces/events son distintos de los eventos de dominio e incluyen identificador de evento, versión, ocurrencia, aggregateId y payload mínimo para consumidores.",
+      "acceptance": [
+        "Cada contrato define nombre, versión, schema/formato, compatibilidad y campos obligatorios.",
+        "Se define el dueño del topic, la clave Kafka auctionId, convenciones de nombres, retención y estrategia de evolución.",
+        "Se documentan semánticas at-least-once, deduplicación por eventId y orden por auctionId para consumidores.",
+        "El contrato es revisable por los equipos consumidores antes de congelarse."
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "name": "reliably-publish-auction-lifecycle-events",
+      "title": "Publicar de forma confiable los eventos del ciclo de vida de Auction",
+      "description": "Implementar la conversión explícita de eventos de dominio a contratos de integración y su publicación outbound en Kafka. Usar una estrategia de entrega confiable definida (preferentemente transactional outbox persistida con la transacción de Auction) para evitar pérdida entre Oracle y Kafka; no publicar directamente desde @EventListener sin garantías.",
+      "acceptance": [
+        "Existen bindings outbound para los cuatro contratos de integración acordados y usan auctionId como message key.",
+        "La publicación no pierde un hecho confirmado si el proceso falla entre la persistencia de Auction y Kafka.",
+        "El reintento no crea eventos lógicamente duplicados para un mismo eventId y deja trazabilidad de fallos recuperables.",
+        "Las pruebas verifican serialización, clave, conversión y comportamiento ante reintentos; mvn test termina correctamente."
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 6,
+      "name": "build-kafka-marketplace-read-model-projection",
+      "title": "Construir la proyección Kafka idempotente del Marketpl  ace",
+      "description": "Reemplazar AuctionCreatedEventHandler in-process por un consumidor de contratos de integración que materialice AuctionMarketplaceViewEntity. La proyección procesa AuctionCreated, PartitionAdded, AuctionFullyFunded y AuctionExpired en orden por auctionId, es idempotente por eventId y permite reconstrucción controlada desde Kafka.",
+      "acceptance": [
+        "El projector no consume eventos de dominio ni contiene reglas de negocio de Auction.",
+        "Cada evento actualiza únicamente los campos de la vista que le corresponden y tolera duplicados y redelivery.",
+        "Se define y prueba el comportamiento ante eventos fuera de orden, evento desconocido y replay completo.",
+        "La vista puede reconstruirse sin datos manuales y las pruebas de proyección terminan correctamente."
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 7,
+      "name": "expose-paginated-marketplace-search-api",
+      "title": "Exponer búsqueda paginada y filtrable del Marketplace",
+      "description": "Evolucionar GET /api/v1/auctions/marketplace para leer exclusivamente la proyección y soportar paginación, ordenamiento explícito y filtros por estado, moneda y certificación green. Añadir caché solo con clave, TTL e invalidación compatibles con la frescura acordada del read model.",
+      "acceptance": [
+        "La respuesta incluye paginación estable, ordenamiento documentado y validación de parámetros.",
+        "Los filtros de estado, moneda y green se aplican en el repositorio de la proyección y pueden combinarse.",
+        "La caché no sirve resultados más antiguos que el límite de frescura acordado y se invalida o vence correctamente tras cambios de la vista.",
+        "Las pruebas cubren filtros, paginación, orden y semántica de caché; mvn test termina correctamente."
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 8,
+      "name": "expose-auction-detail-and-participant-query-apis",
+      "title": "Exponer consultas de detalle de Auction, MYPE e inversionista",
+      "description": "Implementar GET /auctions/{id}, GET /auctions/mype/{mypeId} y GET /auctions/investor/{investorId} como queries CQRS con contratos de respuesta y autorización definidos. Corregir GetAllActiveAuctions para que aplique la semántica de actividad en vez de usar findAll(), y retirar Optional.empty(), ZERO o null usados como placeholders de API o dominio.",
+      "acceptance": [
+        "Cada endpoint delega a un query service y devuelve códigos HTTP consistentes para recurso inexistente y acceso no autorizado.",
+        "GetAllActiveAuctions filtra estados activos según AuctionStatus, no devuelve todas las subastas.",
+        "Los contratos expresan ausencia, montos y filtros sin sentinelas ambiguos ni Optional usados como placeholder.",
+        "Las pruebas cubren detalle, búsquedas por MYPE e inversionista, datos vacíos, autorización y estados activos; mvn test termina correctamente."
+      ],
+      "status": "pending"
+    }
+  ]
+}
