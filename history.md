@@ -26,3 +26,13 @@ Formato de entrada:
   `feature_list.json`, `progress.md`.
 - Veredicto del reviewer: APPROVED.
 - Commits: `fc159eb`, `87598d6`, `b274198`.
+
+## 2026-09-14 — Feature 4 define-versioned-auction-integration-event-contract — done
+- Resumen: se congeló el envelope v1 y los payloads tipados para siete eventos del ciclo de vida,
+  con topic único, JSON Schema, ejemplos, política de compatibilidad y regresión del contrato
+  inbound de Invoicing.
+- Verificación: `mvn -o "-Dmaven.repo.local=C:\Users\user\.m2\repository" test` -> OK (20 pruebas).
+- Archivos tocados: `interfaces/events/resources`, `docs/contracts/auction-lifecycle/v1`, pruebas
+  de contrato, `feature_list.json`, `progress.md`.
+- Veredicto del reviewer: APPROVED.
+- Commits: `97d0e74`, `b42d16a`, `a00f04f`.

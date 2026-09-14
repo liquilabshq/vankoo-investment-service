@@ -59,7 +59,7 @@
         "Se documentan semánticas at-least-once, deduplicación por eventId y orden por auctionId para consumidores.",
         "El contrato es revisable por los equipos consumidores antes de congelarse."
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 5,
