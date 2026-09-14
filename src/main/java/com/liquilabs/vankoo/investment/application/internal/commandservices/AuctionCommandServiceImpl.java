@@ -62,7 +62,7 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
                 command.payerName(),
                 command.dueDate()
         );
-        auction.registerAuctionCreatedEvent();
+        auction.registerAuctionCreatedEvent(clock.instant());
         auctionRepository.save(auction);
         return auction.getId();
     }
