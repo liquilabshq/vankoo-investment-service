@@ -68,3 +68,20 @@ A controlled replay uses this sequence:
 
 The Auction write model and outbox are never deleted during a Marketplace replay. Events received
 out of order are retained as deferred inbox records and retried after their prerequisites arrive.
+
+## Materialization and idempotency
+
+Flyway migration `V3__create_marketplace_projection.sql` creates only two additive tables:
+
+- `auction_marketplace_views` stores one current row per `auctionId`, including the last applied
+  sequence and event identifier.
+- `marketplace_processed_events` is the durable inbox keyed by `eventId`; it retains `APPLIED` and
+  `DEFERRED` messages together with the original envelope so deferred work is replayable.
+
+The consumer validates schema version and event type before opening the projection transaction.
+Inside one transaction it records the inbox item and updates the view. Duplicate `eventId` values
+are ignored, sequences at or below the view watermark cannot regress it, and incremental events
+received before `AuctionPublished` remain `DEFERRED`. A successful `AuctionPublished` then applies
+the pending events in ascending sequence. Unknown types, unsupported versions and invalid payloads
+escape the consumer so the binder performs three deliveries before routing the original record to
+the DLT.
