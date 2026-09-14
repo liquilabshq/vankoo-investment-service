@@ -6,11 +6,19 @@ spring:
   datasource:
     driver-class-name: oracle.jdbc.OracleDriver
   cloud:
+    function:
+      definition: processInvoiceEligibleForFunding;projectAuctionMarketplace
     stream:
       bindings:
         auctionLifecycle-out-0:
           destination: investment.auction-lifecycle.v1
           content-type: application/json
+        projectAuctionMarketplace-in-0:
+          destination: investment.auction-lifecycle.v1
+          group: investment-marketplace-v1
+          content-type: application/json
+          consumer:
+            max-attempts: 3
       kafka:
         binder:
           auto-create-topics: false
@@ -21,6 +29,10 @@ spring:
           auctionLifecycle-out-0:
             producer:
               sync: true
+          projectAuctionMarketplace-in-0:
+            consumer:
+              enable-dlq: true
+              dlq-name: investment.auction-lifecycle.v1.dlq
   jpa:
     show-sql: true
     hibernate:

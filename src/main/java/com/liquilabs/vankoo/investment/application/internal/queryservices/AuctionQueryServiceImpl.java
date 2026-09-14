@@ -9,6 +9,8 @@ import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
 import com.liquilabs.vankoo.investment.infrastructure.configuration.PricingProperties;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.repositories.AuctionRepository;
+import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.AuctionMarketplaceViewEntity;
+import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.AuctionMarketplaceViewRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,11 +27,18 @@ import java.util.Optional;
 public class AuctionQueryServiceImpl implements AuctionQueryService {
 
     private final AuctionRepository auctionRepository;
+    private final AuctionMarketplaceViewRepository marketplaceViewRepository;
     private final PricingProperties pricingProperties;
     private final Clock clock;
 
-    public AuctionQueryServiceImpl(AuctionRepository auctionRepository, PricingProperties pricingProperties, Clock clock) {
+    public AuctionQueryServiceImpl(
+            AuctionRepository auctionRepository,
+            AuctionMarketplaceViewRepository marketplaceViewRepository,
+            PricingProperties pricingProperties,
+            Clock clock
+    ) {
         this.auctionRepository = auctionRepository;
+        this.marketplaceViewRepository = marketplaceViewRepository;
         this.pricingProperties = pricingProperties;
         this.clock = clock;
     }
@@ -47,35 +56,39 @@ public class AuctionQueryServiceImpl implements AuctionQueryService {
     @Override
     public List<AuctionMarketplaceView> handle(GetMarketplaceAuctionsQuery query) {
         LocalDate today = LocalDate.now(clock.withZone(pricingProperties.pricingZone()));
-        return auctionRepository.findByStatusInOrderByExpiresAtAsc(List.of(AuctionStatus.PUBLISHED, AuctionStatus.FUNDING))
+        return marketplaceViewRepository
+                .findByStatusInOrderByExpiresAtAscAuctionIdAsc(
+                        List.of(AuctionStatus.PUBLISHED, AuctionStatus.FUNDING)
+                )
                 .stream()
-                .map(auction -> toMarketplaceView(auction, today))
+                .filter(view -> query.currencyFilter().map(value -> value == view.getCurrency()).orElse(true))
+                .filter(view -> query.onlyGreenCertified().map(value -> !value || view.isGreenCertified()).orElse(true))
+                .map(view -> toMarketplaceView(view, today))
                 .toList();
     }
 
-    private AuctionMarketplaceView toMarketplaceView(Auction auction, LocalDate today) {
-        var quote = auction.acceptedQuote();
-        BigDecimal available = auction.getTargetAmount().amount().subtract(auction.getCurrentFunding().amount());
-        BigDecimal progress = auction.getCurrentFunding().amount()
+    private AuctionMarketplaceView toMarketplaceView(AuctionMarketplaceViewEntity auction, LocalDate today) {
+        BigDecimal available = auction.getTargetAmount().subtract(auction.getCurrentFunding());
+        BigDecimal progress = auction.getCurrentFunding()
                 .multiply(new BigDecimal("100"))
-                .divide(auction.getTargetAmount().amount(), 4, RoundingMode.HALF_UP);
+                .divide(auction.getTargetAmount(), 4, RoundingMode.HALF_UP);
 
         return new AuctionMarketplaceView(
-                auction.getId().uuid(),
-                auction.getInvoiceId().uuid(),
-                auction.getMypeId().uuid(),
+                auction.getAuctionId(),
+                auction.getInvoiceId(),
+                auction.getMypeId(),
                 auction.getPayerRuc(),
                 auction.getPayerName(),
-                auction.getTargetAmount().amount(),
-                auction.getCurrentFunding().amount(),
+                auction.getTargetAmount(),
+                auction.getCurrentFunding(),
                 available,
                 progress,
-                auction.getTargetAmount().currency().name(),
-                toPercentagePoints(quote.getInvestorTea()),
-                toPercentagePoints(quote.getInvestorTermRate()),
-                quote.getTermDays(),
+                auction.getCurrency().name(),
+                toPercentagePoints(auction.getInvestorTea()),
+                toPercentagePoints(auction.getInvestorTermRate()),
+                auction.getQuotedTermDays(),
                 Math.max(0, ChronoUnit.DAYS.between(today, auction.getDueDate())),
-                auction.getRiskScore().grade(),
+                auction.getRiskGrade(),
                 auction.getStatus(),
                 auction.getDueDate(),
                 auction.getExpiresAt(),
