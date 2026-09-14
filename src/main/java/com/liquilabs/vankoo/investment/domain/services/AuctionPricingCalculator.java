@@ -3,7 +3,6 @@ package com.liquilabs.vankoo.investment.domain.services;
 import ch.obermuhlner.math.big.BigDecimalMath;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.Money;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.ScoreGrade;
-import com.liquilabs.vankoo.investment.infrastructure.configuration.PricingProperties;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -19,9 +18,9 @@ public class AuctionPricingCalculator {
     private static final BigDecimal ONE = BigDecimal.ONE;
     private static final BigDecimal DAYS_PER_MONTH = new BigDecimal("30");
 
-    private final PricingProperties properties;
+    private final AuctionPricingPolicy properties;
 
-    public AuctionPricingCalculator(PricingProperties properties) {
+    public AuctionPricingCalculator(AuctionPricingPolicy properties) {
         this.properties = properties;
     }
 

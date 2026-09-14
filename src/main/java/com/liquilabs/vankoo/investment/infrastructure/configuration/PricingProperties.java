@@ -2,6 +2,7 @@ package com.liquilabs.vankoo.investment.infrastructure.configuration;
 
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.Currency;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.ScoreGrade;
+import com.liquilabs.vankoo.investment.domain.services.AuctionPricingPolicy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.math.BigDecimal;
@@ -21,7 +22,7 @@ public record PricingProperties(
         BigDecimal platformFeeTaxRate,
         Map<ScoreGrade, BigDecimal> investorTea,
         Map<Currency, BigDecimal> minimumInvestment
-) {
+) implements AuctionPricingPolicy {
     public PricingProperties {
         if (version == null || version.isBlank()) {
             throw new IllegalArgumentException("Pricing version is required");
