@@ -72,7 +72,7 @@
         "El reintento no crea eventos lógicamente duplicados para un mismo eventId y deja trazabilidad de fallos recuperables.",
         "Las pruebas verifican serialización, clave, conversión y comportamiento ante reintentos; mvn test termina correctamente."
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 6,

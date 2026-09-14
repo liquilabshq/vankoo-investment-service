@@ -36,3 +36,14 @@ Formato de entrada:
   de contrato, `feature_list.json`, `progress.md`.
 - Veredicto del reviewer: APPROVED.
 - Commits: `97d0e74`, `b42d16a`, `a00f04f`.
+
+## 2026-09-14 — Feature 5 reliably-publish-auction-lifecycle-events — done
+- Resumen: se completaron los eventos de dominio del ciclo de vida, su mapeo explícito al
+  contrato v1 y un outbox transaccional Oracle con publicación Kafka at-least-once, key por
+  `auctionId`, confirmación síncrona, reintento con `eventId` estable, backoff y limpieza.
+- Verificación: `mvn -o "-Dmaven.repo.local=C:\Users\user\.m2\repository" test` -> OK
+  (29 pruebas).
+- Archivos tocados: eventos de dominio de Auction, `infrastructure/messaging/outbox`, migración
+  `V2__create_investment_outbox.sql`, configuración Kafka, documentación y pruebas del outbox.
+- Veredicto del reviewer: APPROVED.
+- Commits: `211d4aa`, `980e2f6`, `1155980`, `44268d4`, `a6c2b86`.

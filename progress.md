@@ -9,30 +9,28 @@
 
 ## Rama
 
-- No aplica.
+- `feature/investment-outbox-events`.
 
 ## Plan
 
--
+- Pendiente de seleccionar la siguiente feature del track Dev 2.
 
 ## Notas de la sesión
 
--
+- Features 2, 4 y 5 cerradas y archivadas en esta rama.
 
 ## Evidencia de aceptación
 
--
+- No aplica.
 
 ## Verificación
 
-- Comando: —
-- Resultado: —
-- Verificación manual: —
+- No aplica.
 
 ## Bloqueos
 
--
+- Ninguno.
 
 ## Cierre
 
-- Pendiente: feature activa, reviewer y decisión de commits.
+- Sesión lista para iniciar la feature 6.
