@@ -71,3 +71,8 @@ eventos actuales son `AuctionCreatedEvent`, `PartitionAddedEvent` y
 - `spring.jpa.hibernate.ddl-auto=update` puede cambiar un esquema conectado: toda modificación
   de entidad o del esquema requiere la aprobación previa indicada por la skill
   `database-schema-change`.
+
+## Marketplace
+
+La propiedad, consistencia eventual, consulta, stream de integración y procedimiento de replay del
+read model están definidos en [`MARKETPLACE_READ_MODEL.md`](MARKETPLACE_READ_MODEL.md).
