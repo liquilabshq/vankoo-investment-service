@@ -47,3 +47,16 @@ Formato de entrada:
   `V2__create_investment_outbox.sql`, configuración Kafka, documentación y pruebas del outbox.
 - Veredicto del reviewer: APPROVED.
 - Commits: `211d4aa`, `980e2f6`, `1155980`, `44268d4`, `a6c2b86`.
+
+## 2026-09-14 — Feature 6 build-kafka-marketplace-read-model-projection — done
+- Resumen: se añadió la proyección Kafka transaccional del ciclo de vida sobre una vista Oracle
+  separada y un inbox durable. Deduplica por `eventId`, protege el watermark de secuencia,
+  difiere eventos sin publicación previa, drena prerequisitos en orden y conserva estados
+  terminales; Marketplace dejó de consultar el agregado para su listado.
+- Verificación: `mvn -o "-Dmaven.repo.local=C:\Users\user\.m2\repository" test` -> OK
+  (38 pruebas).
+- Archivos tocados: comando/servicio de proyección, consumer/assembler/parser Kafka,
+  `application/internal/eventhandlers`, entidades/repositorios de vista e inbox, migración V3,
+  configuración, query service, documentación y pruebas.
+- Veredicto del reviewer: APPROVED.
+- Commits: `48e2b95`, `241e5a9`, `6e190b8`, `5451379`, `3af42dc`, `39ea82b`.

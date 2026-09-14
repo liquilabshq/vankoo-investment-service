@@ -17,7 +17,7 @@
 
 ## Notas de la sesión
 
-- Features 2, 4 y 5 cerradas y archivadas en esta rama.
+- Features 2, 4, 5 y 6 cerradas y archivadas en esta rama.
 
 ## Evidencia de aceptación
 
@@ -33,4 +33,4 @@
 
 ## Cierre
 
-- Sesión lista para iniciar la feature 6.
+- Sesión lista para iniciar la feature 7.

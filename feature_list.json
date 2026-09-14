@@ -85,7 +85,7 @@
         "Se define y prueba el comportamiento ante eventos fuera de orden, evento desconocido y replay completo.",
         "La vista puede reconstruirse sin datos manuales y las pruebas de proyección terminan correctamente."
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 7,
