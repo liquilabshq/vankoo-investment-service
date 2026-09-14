@@ -33,7 +33,7 @@
         "Se define cómo se reinicia o reconstruye la proyección sin mezclar eventos de dominio con contratos de integración.",
         "Se identifica el consumidor, topic, clave de partición, versión y política de evolución de cada evento requerido."
       ],
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "id": 3,
