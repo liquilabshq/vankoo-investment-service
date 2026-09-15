@@ -25,6 +25,7 @@ public record AuctionMarketplaceView(
         ScoreGrade riskGrade,
         AuctionStatus status,
         LocalDate dueDate,
+        Instant publishedAt,
         Instant expiresAt,
         boolean greenCertified
 ) {
