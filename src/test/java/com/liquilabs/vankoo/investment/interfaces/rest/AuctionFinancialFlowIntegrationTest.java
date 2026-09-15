@@ -3,6 +3,8 @@ package com.liquilabs.vankoo.investment.interfaces.rest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liquilabs.vankoo.investment.domain.model.commands.*;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionFullyFundedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.PartitionAddedEvent;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionByIdQuery;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
@@ -19,6 +21,8 @@ import org.springframework.cloud.stream.binder.test.TestChannelBinderConfigurati
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -38,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import({AuctionFinancialFlowIntegrationTest.FixedClockConfiguration.class, TestChannelBinderConfiguration.class})
 @ActiveProfiles("test")
+@RecordApplicationEvents
 class AuctionFinancialFlowIntegrationTest {
 
     @Autowired
@@ -165,6 +170,40 @@ class AuctionFinancialFlowIntegrationTest {
         var auction = auctionQueryService.handle(new GetAuctionByIdQuery(auctionId)).orElseThrow();
         assertThat(auction.getCurrentFunding().amount()).isEqualByComparingTo("6000.00");
         assertThat(auction.getPartitions()).hasSize(1);
+    }
+
+    @Test
+    void publishesPartitionAddedAndAuctionFullyFundedEventsWhenFundingCompletes(ApplicationEvents events) {
+        var auctionId = auctionCommandService.handle(new CreateAuctionCommand(
+                new InvoiceId("invoice-events"), new UserId("mype-events"),
+                new Money(new BigDecimal("10000.00"), Currency.PEN), false,
+                "20123456789", "Pagador Eventos S.A.", LocalDate.of(2026, 11, 6)
+        ));
+        auctionCommandService.handle(new EvaluateAuctionCommand(
+                auctionId, "assessment-events", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
+        ));
+        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(auctionId));
+        auctionCommandService.handle(new AcceptFinancialQuoteCommand(auctionId, quote.getId()));
+
+        auctionCommandService.handle(new AddPartitionCommand(
+                auctionId, new UserId("investor-events-1"),
+                new Money(new BigDecimal("500.00"), Currency.PEN), "tx-events-partial"
+        ));
+        auctionCommandService.handle(new AddPartitionCommand(
+                auctionId, new UserId("investor-events-2"),
+                new Money(new BigDecimal("9269.76"), Currency.PEN), "tx-events-final"
+        ));
+
+        List<PartitionAddedEvent> partitionEvents = events.stream(PartitionAddedEvent.class)
+                .filter(event -> event.auctionId().equals(auctionId.uuid()))
+                .toList();
+        assertThat(partitionEvents).hasSize(2);
+        assertThat(partitionEvents.get(1).newCurrentFunding()).isEqualByComparingTo("9769.76");
+
+        List<AuctionFullyFundedEvent> fullyFundedEvents = events.stream(AuctionFullyFundedEvent.class)
+                .filter(event -> event.auctionId().equals(auctionId.uuid()))
+                .toList();
+        assertThat(fullyFundedEvents).hasSize(1);
     }
 
     @Test
