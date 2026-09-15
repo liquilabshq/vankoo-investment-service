@@ -46,7 +46,7 @@
         "Las pruebas cubren expiración válida, ausencia de doble emisión y estados que no pueden expirar.",
         "mvn test termina correctamente."
       ],
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": 4,
