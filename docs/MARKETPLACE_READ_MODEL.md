@@ -38,6 +38,17 @@ The response contains `content`, `page`, `size`, `totalElements`, `totalPages` a
 results may be cached for at most 30 seconds. Projection updates invalidate all Marketplace query
 entries after their database transaction commits.
 
+Example:
+
+```http
+GET /api/v1/auctions/marketplace?status=PUBLISHED&status=FUNDING&currency=PEN&greenCertified=true&page=0&size=20&sort=expiresAt,asc
+```
+
+`page` must be zero or greater, `size` must be between 1 and 100, and `sort` accepts exactly one
+of `expiresAt`, `dueDate`, `publishedAt` or `targetAmount` followed by `asc` or `desc`. The service
+always appends `auctionId ASC` as a deterministic tie-breaker. Invalid status, currency, page,
+size or sort values return HTTP 400.
+
 ## Event stream
 
 `investment-service` owns `investment.auction-lifecycle.v1`. Every message uses `auctionId` as the
