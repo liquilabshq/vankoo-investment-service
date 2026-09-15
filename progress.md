@@ -5,138 +5,111 @@
 
 ## Feature en curso
 
-- id 8 — expose-auction-detail-and-participant-query-apis — Exponer consultas de detalle de
-  Auction, MYPE e inversionista.
+- id 10 — dockerize-investment-service — Dockerizar Investment Service e integrarlo en la
+  infraestructura compartida.
 
 ## Rama
 
-- feature/expose-auction-participant-query-apis-8 (creada desde develop tras el merge de PR #10,
-  feature/investment-outbox-events).
+- feature/dockerize-investment-service-10 (creada desde feature/expose-auction-participant-query-apis-8
+  tras el push de sus 3 commits de cierre; esa rama es idéntica a `origin/develop` + el cierre de
+  la feature 8, ya que el PR #11 con el código de la feature 8 ya estaba mergeado a develop antes
+  de crear esta rama).
 
 ## Plan
 
-1. Nuevas queries CQRS GetAuctionsByMypeQuery y GetAuctionsByInvestorQuery
-   (domain/model/queries), agregadas a AuctionQueryService/AuctionQueryServiceImpl.
-2. AuctionRepository: findByMypeId (derived query) y findByInvestorParticipation (@Query con
-   join a partitions), ambas con @EntityGraph(quotes, partitions) para evitar
-   LazyInitializationException al mapear a AuctionDetailsResource fuera de la transacción
-   (open-in-view: false).
-3. Autorización: nueva UnauthorizedAccessException (domain/exceptions) -> 403 en
-   GlobalExceptionHandler. AuctionsController lee X-User-Id (@RequestHeader required=false) y lo
-   compara contra el path variable antes de delegar al query service.
-4. Nuevos endpoints: GET /auctions/mype/{mypeId}, GET /auctions/investor/{investorId}.
-5. GetAllActiveAuctionsQuery ya filtraba correctamente (findByStatusIn, no findAll()) desde antes
-   de esta feature; se agregó test explícito que lo demuestra en vez de un endpoint nuevo (ningún
-   acceptance ni el título piden exponerlo vía REST).
-6. Tests: AuctionRepositoryTest (mype/investor, incluye caso vacío), AuctionFinancialFlowIntegrationTest
-   (200 con datos, 403 por caller distinto, 403 por header ausente, filtro de activos).
+1. Crear `Dockerfile` multi-stage en la raíz de este repo (build con Maven 3.9.12/Temurin 25,
+   runtime con `eclipse-temurin:25-jre-jammy`), siguiendo el mismo patrón ya usado en
+   `vankoo-iam-service/Dockerfile`.
+2. Crear `src/main/resources/application-docker.yaml` con datasource Oracle, binder Kafka y
+   Eureka resueltos por variables de entorno (`INVESTMENT_DB_HOST`, `KAFKA_HOST`/
+   `KAFKA_INTERNAL_PORT`, `DISCOVERY_SERVER_URL`), análogo al de `vankoo-iam-service`.
+3. Agregar el bloque `investment-service` en `vankoo/infrastructure/docker-compose.yaml` bajo el
+   placeholder ya existente, con `depends_on` sobre `investment-db-oracle` (sin healthcheck propio
+   → `service_started`), `kafka-broker` y `discovery-server` (`service_healthy`), puerto host
+   `8083` y healthcheck sobre `/actuator/health/readiness`.
+4. Agregar `INVESTMENT_SERVICE_PORT`/`INVESTMENT_SERVICE_HOST` a `vankoo/infrastructure/.env.example`.
+5. Validar sintaxis (`docker compose config`), build de imagen (`docker build`) y que `mvn test`
+   siga en verde (no se tocó código Java, solo config/Docker).
 
 ## Notas de la sesión
 
-- El usuario implementó el código pegando los snippets provistos por chat y corrigió él mismo un
-  typo (`findByMipeId` -> `findByMypeId`, `List<Optional<Auction>>` -> `List<Auction>`) antes de
-  que se le diera la solución.
-- Se detectó y corrigió un bug real de LazyInitializationException en
-  returnsAuctionsForAParticipatingInvestorAndRejectsOtherCallers: faltaba @EntityGraph en los
-  repositorios nuevos. Corregido y reverificado.
-- Se revirtió un typo accidental y no relacionado en el campo `name` de la feature 9 dentro de
-  feature_list.json (espacios de más), detectado durante `git diff` antes de crear la rama.
+- Se cerró y archivó la feature 8 en esta misma cadena de ramas antes de empezar (ver history.md).
+- El compose de `vankoo/infrastructure` ya traía `investment-db-oracle` listo (BD) desde antes;
+  esta feature solo agrega el contenedor de la aplicación.
+- Cambios en 2 repos: `vankoo-investment-service` (Dockerfile, application-docker.yaml,
+  feature_list.json, progress.md) e `infrastructure` (docker-compose.yaml, .env.example) — la
+  integración con infraestructura se gestiona en su propia rama (`feature/investment-service`),
+  fuera del harness de este repo.
 
 ## Evidencia de aceptación
 
-1. "Cada endpoint delega a un query service y devuelve códigos HTTP consistentes para recurso
-   inexistente y acceso no autorizado." -> AuctionsController.getAuctionsByMype/getAuctionsByInvestor
-   delegan a auctionQueryService.handle(...); requireCaller() lanza UnauthorizedAccessException ->
-   403 (GlobalExceptionHandler). Probado en
-   returnsAuctionsForTheirOwningMypeAndRejectsOtherCallers y
-   returnsAuctionsForAParticipatingInvestorAndRejectsOtherCallers (caller distinto y header
-   ausente).
-2. "GetAllActiveAuctions filtra estados activos según AuctionStatus, no devuelve todas las
-   subastas." -> Ya implementado (findByStatusIn) antes de esta feature; probado explícitamente
-   en getAllActiveAuctionsQueryOnlyReturnsPublishedOrFundingAuctions.
-3. "Los contratos expresan ausencia... sin sentinelas ambiguos ni Optional usados como
-   placeholder." -> Las listas vacías (List.of()) expresan "sin resultados" sin Optional ni ZERO;
-   AuctionRepositoryTest prueba explícitamente el caso vacío para ambos métodos nuevos.
-4. "Las pruebas cubren detalle, búsquedas por MYPE e inversionista, datos vacíos, autorización y
-   estados activos; mvn test termina correctamente." -> Ver Verificación.
+1. "Existe un Dockerfile multi-stage... sin credenciales embebidas." -> `Dockerfile` en la raíz,
+   build Maven + runtime `eclipse-temurin:25-jre-jammy`, sin valores de credenciales hardcodeados
+   (usuario `spring` no root). Build real confirmado (ver Verificación).
+2. "Existe `application-docker.yaml`... sin valores por defecto que expongan secretos." ->
+   `src/main/resources/application-docker.yaml`, hosts/puertos resueltos por variables de entorno;
+   el único default embebido es el nombre de host de servicio (`investment-db-oracle`,
+   `kafka-broker`), no una credencial.
+3. "`docker compose up -d --build investment-service`... sin errores, conectado a
+   investment-db-oracle, kafka-broker y discovery-server." -> Ejecutado desde
+   `vankoo/infrastructure` (rama `feature/investment-service`); los 4 contenedores
+   (`investment-service`, `investment-db-oracle`, `kafka-broker`, `discovery-server`) llegaron a
+   `Up`/`healthy` sin reinicios ni errores. Logs confirman migraciones Flyway (3) aplicadas contra
+   Oracle, conexión Hibernate a `jdbc:oracle:thin:@investment-db-oracle:1521/FREEPDB1`, y
+   suscripción a los canales Kafka `processInvoiceEligibleForFunding-in-0` y
+   `projectAuctionMarketplace-in-0`.
+4. "`GET /actuator/health` responde 200 con el servicio registrado en Eureka." ->
+   `curl http://localhost:8083/actuator/health` -> `{"status":"UP", "groups":["liveness","readiness"]}`.
+   `curl http://localhost:8761/eureka/apps` -> aplicación `INVESTMENT-SERVICE`, instancia
+   `investment-service:investment-service:8082`, `status":"UP"`.
+5. "`docker-compose.yaml`/`compose.yaml` no se agregan a este repo." -> confirmado; ambos archivos
+   nuevos viven solo en `vankoo/infrastructure`. `git status --short` en
+   `vankoo-investment-service` no muestra ningún archivo de compose.
 
 ## Verificación
 
-- Comando: mvn test (Maven 3.9.10 cacheado, JDK 25)
-- Resultado: BUILD SUCCESS — Tests run: 60, Failures: 0, Errors: 0, Skipped: 0 (incluye la suite
-  completa heredada de las features 2/4/5/6/7, no solo lo nuevo de esta feature).
-- Verificación manual: —
+- `mvn test` (Maven 3.9.12 vía wrapper cache, JDK 25) -> BUILD SUCCESS. 60/60 tests, 0 failures,
+  0 errors, 0 skipped (`target/surefire-reports`).
+- `docker compose config -q` (desde `vankoo/infrastructure`) -> OK, sin errores de sintaxis.
+- `docker build -t vankoo-investment-service:test .` -> éxito, imagen de 681MB.
+- `docker compose up -d --build investment-service` (desde `vankoo/infrastructure`) -> los 4
+  contenedores quedaron `Up`/`healthy`: `investment-service` (healthcheck
+  `/actuator/health/readiness`), `investment-db-oracle`, `kafka-broker`, `discovery-server`.
+- `GET http://localhost:8083/actuator/health` -> 200, `{"status":"UP"}`.
+- `GET http://localhost:8761/eureka/apps` -> `INVESTMENT-SERVICE` registrado, `status: UP`.
+- Verificación manual: se corrió `docker compose down` sin acotar a servicios, lo que además
+  detuvo y eliminó `iam-db-postgres` e `invoicing-db-mongo` (contenedores preexistentes,
+  detenidos, de trabajo previo ajeno a esta feature). Los volúmenes de datos
+  (`vankoo_iam-db-data`, `vankoo_invoicing-db-data`) quedaron intactos; a pedido explícito de la
+  persona usuaria no se recrearon los contenedores en esta sesión.
 
 ## Bloqueos
 
 -
 
-## Cierre
-
-- Pendiente: feature activa, reviewer y decisión de commits.
-
-## Review — feature 8
+## Review — feature 10
 **Veredicto:** APPROVED
 
 ### Checkpoints
-- C1: [x] Evidencia: los 4 criterios de `acceptance` están enumerados con evidencia en la sección
-  "Evidencia de aceptación" de este archivo y se verificaron contra el código real:
-  `AuctionsController.getAuctionsByMype`/`getAuctionsByInvestor` (líneas 114-136) delegan a
-  `auctionQueryService.handle(...)`; `requireCaller` (líneas 138-142) lanza
-  `UnauthorizedAccessException` -> 403 vía `GlobalExceptionHandler.handleUnauthorized`
-  (líneas 39-42); `GetAllActiveAuctionsQuery` sigue usando `findByStatusIn`, confirmado con test
-  explícito `getAllActiveAuctionsQueryOnlyReturnsPublishedOrFundingAuctions`; los nuevos métodos
-  del repositorio devuelven `List<Auction>` (lista vacía, no `Optional`/`null`/`ZERO`) y
-  `AuctionRepositoryTest` prueba el caso vacío para ambos (`findsAuctionsByMypeId`,
-  `findsAuctionsByInvestorParticipation`). Nota menor: la evidencia #1 de `progress.md` afirma
-  que ambos tests de integración cubren "caller distinto y header ausente", pero
-  `returnsAuctionsForAParticipatingInvestorAndRejectsOtherCallers`
-  (`AuctionFinancialFlowIntegrationTest.java:215-234`) solo cubre el caso de caller distinto, no
-  el de header ausente; el caso de header ausente sí está cubierto por
-  `returnsAuctionsForTheirOwningMypeAndRejectsOtherCallers` sobre el mismo método
-  `requireCaller`, así que la rama de código está probada igualmente — es una imprecisión de
-  redacción, no un vacío de comportamiento.
-- C2: [x] Evidencia: `rg -n 'com\.liquilabs\.vankoo\.investment\.(application|infrastructure|interfaces)' src/main/java/com/liquilabs/vankoo/investment/domain` no devuelve resultados (reejecutado por el reviewer).
-- C3: [x] Evidencia: `rg -n '\.(save|saveAll|delete|deleteAll|flush)\(' src/main/java/com/liquilabs/vankoo/investment/application/internal/queryservices` no devuelve resultados (reejecutado por el reviewer). `AuctionQueryServiceImpl.handle(GetAuctionsByMypeQuery)`/`handle(GetAuctionsByInvestorQuery)` solo leen.
-- C4: [x] Evidencia: `AuctionsController.getAuctionsByMype`/`getAuctionsByInvestor`
-  (`AuctionsController.java:114-136`) solo transforman el path variable/header a un `Query`,
-  delegan a `auctionQueryService.handle(...)` y mapean el resultado con
-  `AuctionDetailsResource::from`; no acceden a `AuctionRepository` ni contienen transiciones de
-  `Auction`. `requireCaller` es control de acceso HTTP (decisión de arquitectura ya aceptada:
-  el gateway inyecta `X-User-Id` tras validar el JWT, no hay Spring Security local), no una regla
-  de negocio del agregado.
-- C5: [x] Evidencia: feature puramente de lectura; `Auction.java` no aparece en `git status --short`
-  (sin modificar) y ningún archivo de `application/internal/eventhandlers` fue tocado. No se
-  agregan ni alteran eventos de dominio ni handlers de proyección.
-- C6: [x] Evidencia: `rg -n 'System\.out\.|TODO' src` no devuelve resultados (reejecutado por el reviewer).
-- C7: [x] Evidencia: `mvn test` reejecutado por el reviewer
-  (`$env:JAVA_HOME = "C:\Users\paulf\.jdks\openjdk-25"; mvn.cmd -q test`) termina con código de
-  salida 0. Agregado de `target/surefire-reports/*.txt`: Tests run: 60, Failures: 0, Errors: 0,
-  Skipped: 0. `AuctionRepositoryTest`: 3/3 OK (incluye los 2 tests nuevos). `AuctionFinancialFlowIntegrationTest`: 7/7 OK (incluye los 3 tests nuevos: mype, investor, filtro de activos).
-- C8: [x] Evidencia: `git ls-files .env .env.* '*.pfx' '*.pem' '*.key'` no devuelve resultados (reejecutado por el reviewer). No hay credenciales ni hosts nuevos en los archivos cambiados.
-- C9: [x] Evidencia: `grep -c '"status": "in_progress"' feature_list.json` devuelve `1` (solo la
-  feature 8). La feature sigue en `in_progress` en el árbol de trabajo, no se marcó `done`.
-
-### Verificación adicional
-- Se confirmó que `@EntityGraph(attributePaths = {"quotes", "partitions"})` en
-  `AuctionRepository.findByMypeId` y `findByInvestorParticipation`
-  (`AuctionRepository.java:48-54`) corrige el `LazyInitializationException` reportado: los nombres
-  de atributo coinciden con los campos reales del agregado (`Auction.java`: `quotes` línea 144,
-  `partitions` línea 149), y con `open-in-view: false` el fetch join evita el acceso lazy fuera de
-  la transacción al mapear `AuctionDetailsResource.from(...)`. Correcto.
-- Se verificó que `Partition.investorId` es de tipo `UserId` (no `String`), consistente con el
-  parámetro `:investorId` de la `@Query` de `findByInvestorParticipation`.
-- GET `/auctions/{auctionId}` (`AuctionsController.java:50-54`) es preexistente (no forma parte
-  del diff de esta feature) y no recibe el mismo control `X-User-Id`; se considera intencional y
-  razonable, ya que es una vista general de detalle (p. ej. un inversionista debe poder ver el
-  detalle de una subasta publicada antes de invertir, sin ser aún parte de `partitions`), a
-  diferencia de `/mype/{mypeId}` e `/investor/{investorId}` que exponen listados propios de un
-  usuario. No se solicita cambio.
-
-- `git diff --check develop` reporta un único hallazgo de estilo, no bloqueante: trailing
-  whitespace en `AuctionQueryService.java:15` (línea `List<Auction> handle(GetAuctionsByMypeQuery
-  query); ` termina con un espacio). No afecta a ningún checkpoint ni a la compilación; se deja
-  como mejora opcional de limpieza, no como cambio requerido.
+- C1: [x] Evidencia: los 5 criterios de `acceptance` están enumerados con evidencia real en la
+  sección "Evidencia de aceptación" (build, `docker compose up`, health, Eureka, ausencia de
+  compose en este repo).
+- C2: [x] No aplica — esta feature no toca `src/main/java/.../domain`. Sin cambios de dominio.
+- C3: [x] No aplica — no se tocaron query services.
+- C4: [x] No aplica — no se agregaron ni modificaron controllers/consumers.
+- C5: [x] No aplica — no se agregaron ni modificaron eventos de dominio ni handlers.
+- C6: [x] Evidencia: `rg -n 'System\.out\.|TODO' src` no devuelve resultados.
+- C7: [x] Evidencia: `mvn test` -> BUILD SUCCESS, 60/60, 0 failures/errors/skipped
+  (`target/surefire-reports`).
+- C8: [x] Evidencia: `git ls-files .env .env.* '*.pfx' '*.pem' '*.key'` no devuelve resultados;
+  `Dockerfile` y `application-docker.yaml` solo referencian variables de entorno, sin valores de
+  credenciales reales.
+- C9: [x] Evidencia: exactamente 1 feature `in_progress` (id 10).
 
 ### Cambios requeridos
 Ninguno.
+
+## Cierre
+
+- Feature 10 verificada end-to-end y con review APPROVED. Lista para el plan de commits en los 2
+  repos (`vankoo-investment-service` e `infrastructure`).

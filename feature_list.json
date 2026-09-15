@@ -111,7 +111,7 @@
         "Los contratos expresan ausencia, montos y filtros sin sentinelas ambiguos ni Optional usados como placeholder.",
         "Las pruebas cubren detalle, búsquedas por MYPE e inversionista, datos vacíos, autorización y estados activos; mvn test termina correctamente."
       ],
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "id": 9,
@@ -125,6 +125,20 @@
         "AuctionPricingCalculatorTest y AuctionLifecycleTest se actualizan a la nueva firma y mvn test termina correctamente."
       ],
       "status": "done"
+    },
+    {
+      "id": 10,
+      "name": "dockerize-investment-service",
+      "title": "Dockerizar Investment Service e integrarlo en la infraestructura compartida",
+      "description": "El servicio no tiene Dockerfile todavía. Crear un Dockerfile multi-stage (build con Maven, runtime con JRE liviano) siguiendo el mismo patrón ya usado en vankoo-iam-service, junto con un perfil application-docker.yaml que resuelva host de BD, Kafka y Eureka vía variables de entorno. Integrar el servicio en el docker-compose de la infraestructura externa (repo vankoo/infrastructure), donde investment-db-oracle ya existe, y validar que levanta y se registra correctamente junto a Oracle, Kafka y el discovery-server.",
+      "acceptance": [
+        "Existe un Dockerfile multi-stage en la raíz de este repo que compila con Maven y produce una imagen runtime liviana basada en un JRE, sin credenciales embebidas.",
+        "Existe src/main/resources/application-docker.yaml con los hosts de Oracle, Kafka y Eureka resueltos por variables de entorno, sin valores por defecto que expongan secretos.",
+        "docker compose up -d --build investment-service (desde vankoo/infrastructure) levanta el contenedor sin errores, conectado a investment-db-oracle, kafka-broker y discovery-server en la misma red.",
+        "GET /actuator/health responde 200 con el servicio registrado en Eureka (discovery-server).",
+        "docker-compose.yaml o compose.yaml no se agregan a este repo (vankoo-investment-service); la infraestructura vive únicamente en vankoo/infrastructure."
+      ],
+      "status": "in_progress"
     }
   ]
 }
