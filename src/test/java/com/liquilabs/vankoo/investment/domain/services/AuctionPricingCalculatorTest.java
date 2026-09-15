@@ -2,14 +2,13 @@ package com.liquilabs.vankoo.investment.domain.services;
 
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.Currency;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.Money;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.PricingParameters;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.ScoreGrade;
-import com.liquilabs.vankoo.investment.infrastructure.configuration.PricingProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Map;
 
@@ -18,11 +17,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class AuctionPricingCalculatorTest {
 
-    private final AuctionPricingCalculator calculator = new AuctionPricingCalculator(properties());
+    private final AuctionPricingCalculator calculator = new AuctionPricingCalculator();
 
     @Test
     void calculatesTheApprovedSixtyDayGradeBExample() {
         FinancialCalculation result = calculator.calculate(
+                pricingParameters(),
                 new Money(new BigDecimal("10000.00"), Currency.PEN),
                 ScoreGrade.B,
                 LocalDate.of(2026, 9, 7),
@@ -44,6 +44,7 @@ public class AuctionPricingCalculatorTest {
     @Test
     void rejectsAnInvoiceThatHasAlreadyMatured() {
         assertThatThrownBy(() -> calculator.calculate(
+                pricingParameters(),
                 new Money(new BigDecimal("1000.00"), Currency.PEN),
                 ScoreGrade.A,
                 LocalDate.of(2026, 9, 7),
@@ -61,6 +62,7 @@ public class AuctionPricingCalculatorTest {
     void appliesTheConfiguredTeaAcrossSupportedTerms(ScoreGrade grade, int days, String expectedTea) {
         LocalDate valuationDate = LocalDate.of(2026, 9, 7);
         FinancialCalculation result = calculator.calculate(
+                pricingParameters(),
                 new Money(new BigDecimal("10000.00"), Currency.USD),
                 grade,
                 valuationDate,
@@ -83,18 +85,13 @@ public class AuctionPricingCalculatorTest {
                 .hasMessageContaining("two decimal places");
     }
 
-    public static PricingProperties properties() {
-        return new PricingProperties(
+    public static PricingParameters pricingParameters() {
+        return new PricingParameters(
                 "test-2026-09",
-                "America/Lima",
                 360,
-                Duration.ofHours(24),
-                Duration.ofDays(7),
-                Duration.ofDays(1),
                 new BigDecimal("0.003"),
                 new BigDecimal("0.18"),
-                Map.of(ScoreGrade.A, new BigDecimal("0.12"), ScoreGrade.B, new BigDecimal("0.15"), ScoreGrade.C, new BigDecimal("0.18")),
-                Map.of(Currency.PEN, new BigDecimal("500.00"), Currency.USD, new BigDecimal("150.00"))
+                Map.of(ScoreGrade.A, new BigDecimal("0.12"), ScoreGrade.B, new BigDecimal("0.15"), ScoreGrade.C, new BigDecimal("0.18"))
         );
     }
 }

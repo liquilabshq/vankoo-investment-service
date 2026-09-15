@@ -7,6 +7,7 @@ import com.liquilabs.vankoo.investment.domain.model.entities.AuctionFinancialQuo
 import com.liquilabs.vankoo.investment.domain.model.entities.Partition;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.PricingParameters;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.QuoteStatus;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
 import com.liquilabs.vankoo.investment.domain.services.AuctionPricingCalculator;
@@ -91,7 +92,15 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
         }
         var now = clock.instant();
         LocalDate valuationDate = LocalDate.now(clock.withZone(pricingProperties.pricingZone()));
+        var pricingParameters = new PricingParameters(
+                pricingProperties.version(),
+                pricingProperties.dayCountBasis(),
+                pricingProperties.platformMonthlyFeeRate(),
+                pricingProperties.platformFeeTaxRate(),
+                pricingProperties.investorTea()
+        );
         var calculation = pricingCalculator.calculate(
+                pricingParameters,
                 auction.getFundableAmount(),
                 auction.getRiskScore().grade(),
                 valuationDate,

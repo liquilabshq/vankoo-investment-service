@@ -45,8 +45,8 @@ vankoo:
         B: 0.15
         C: 0.18
       minimum-investment:
-        PEN: 500.00
-        USD: 150.00
+        PEN: 50.00
+        USD: 15.00
     lifecycle:
       expiration-check-delay: PT1H
 

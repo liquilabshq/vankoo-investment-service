@@ -76,8 +76,8 @@ vankoo:
         B: ${INVESTMENT_TEA_B:0.15}
         C: ${INVESTMENT_TEA_C:0.18}
       minimum-investment:
-        PEN: ${INVESTMENT_MINIMUM_PEN:500.00}
-        USD: ${INVESTMENT_MINIMUM_USD:150.00}
+        PEN: ${INVESTMENT_MINIMUM_PEN:50.00}
+        USD: ${INVESTMENT_MINIMUM_USD:15.00}
     lifecycle:
       expiration-check-delay: ${INVESTMENT_EXPIRATION_CHECK_DELAY:PT1M}
     outbox:

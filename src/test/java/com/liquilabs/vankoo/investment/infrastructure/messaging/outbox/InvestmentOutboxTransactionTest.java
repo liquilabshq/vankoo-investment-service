@@ -85,8 +85,9 @@ class InvestmentOutboxTransactionTest {
     void acceptingAQuotePersistsTheSelfContainedPublishedEvent() {
         Auction auction = auction("invoice-outbox-published");
         auction.evaluate("assessment-outbox", ScoreGrade.B, true, NOW);
-        var calculator = new AuctionPricingCalculator(AuctionPricingCalculatorTest.properties());
+        var calculator = new AuctionPricingCalculator();
         var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(),
                 auction.getFundableAmount(),
                 ScoreGrade.B,
                 LocalDate.of(2026, 9, 14),

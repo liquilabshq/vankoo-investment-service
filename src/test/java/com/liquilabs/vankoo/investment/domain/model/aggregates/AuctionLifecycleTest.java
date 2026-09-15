@@ -18,12 +18,38 @@ class AuctionLifecycleTest {
 
     private static final Instant NOW = Instant.parse("2026-09-07T17:00:00Z");
     private static final LocalDate DUE_DATE = LocalDate.of(2026, 11, 6);
-    private final AuctionPricingCalculator calculator = new AuctionPricingCalculator(AuctionPricingCalculatorTest.properties());
+    private final AuctionPricingCalculator calculator = new AuctionPricingCalculator();
+
+    @Test
+    void startsInPendingVerificationRiskWithNoFundingAndNoRiskGrade() {
+        Auction auction = newAuction();
+
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.PENDING_VERIFICATION_RISK);
+        assertThat(auction.getCurrentFunding().amount()).isEqualByComparingTo("0.00");
+        assertThat(auction.getCurrentFunding().currency()).isEqualTo(Currency.PEN);
+        assertThat(auction.getRiskScore().grade()).isEqualTo(ScoreGrade.UNDER_EVALUATION);
+        assertThat(auction.getFundableAmount()).isNull();
+        assertThat(auction.getPartitions()).isEmpty();
+    }
+
+    @Test
+    void rejectsAnInvestmentBelowTheMinimumTicketWhenThereIsAmpleFundingRoomLeft() {
+        Auction auction = evaluatedAndPublishedAuction();
+
+        assertThatThrownBy(() -> auction.addInvestment(
+                new UserId("investor-1"), new Money(new BigDecimal("200.00"), Currency.PEN),
+                new BigDecimal("500.00"), "tx-below-minimum", NOW.plusSeconds(1)
+        )).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("minimum");
+
+        assertThat(auction.getCurrentFunding().amount()).isEqualByComparingTo("0.00");
+        assertThat(auction.getPartitions()).isEmpty();
+    }
 
     @Test
     void acceptsAQuoteAndAllocatesTheReceivableExactlyAcrossPartitions() {
         Auction auction = evaluatedAuction();
-        var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
         var quote = auction.createQuote(calculation, NOW, Duration.ofHours(24));
 
         auction.acceptQuote(quote.getId(), NOW, Duration.ofDays(7), Duration.ofDays(1), java.time.ZoneId.of("America/Lima"));
@@ -86,6 +112,36 @@ class AuctionLifecycleTest {
     }
 
     @Test
+    void doesNotExpireAuctionsThatWereNeverPublished() {
+        Auction auction = evaluatedAuction();
+
+        boolean changed = auction.expireIfDue(NOW.plus(Duration.ofDays(365)));
+
+        assertThat(changed).isFalse();
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.DRAFT);
+        assertThat(auction.getExpiresAt()).isNull();
+    }
+
+    @Test
+    void doesNotExpireOrReEmitOnceAnAuctionAlreadyExpired() {
+        Auction auction = evaluatedAndPublishedAuction();
+        auction.addInvestment(
+                new UserId("investor-1"), new Money(new BigDecimal("500.00"), Currency.PEN),
+                new BigDecimal("500.00"), "tx-expiring", NOW.plusSeconds(1)
+        );
+        Instant expirationCheck = NOW.plus(Duration.ofDays(8));
+        boolean firstAttempt = auction.expireIfDue(expirationCheck);
+        Instant cancelledAtAfterFirstExpiration = auction.getCancelledAt();
+
+        boolean secondAttempt = auction.expireIfDue(expirationCheck.plus(Duration.ofDays(30)));
+
+        assertThat(firstAttempt).isTrue();
+        assertThat(secondAttempt).isFalse();
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.EXPIRED);
+        assertThat(auction.getCancelledAt()).isEqualTo(cancelledAtAfterFirstExpiration);
+    }
+
+    @Test
     void rejectsEvaluationWhenTheFullBalanceIsNotOutstanding() {
         Auction auction = newAuction();
         assertThatThrownBy(() -> auction.evaluate("risk-1", ScoreGrade.A, false, NOW))
@@ -96,7 +152,8 @@ class AuctionLifecycleTest {
     @Test
     void supersedesThePreviousUnacceptedQuote() {
         Auction auction = evaluatedAuction();
-        var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
         var first = auction.createQuote(calculation, NOW, Duration.ofHours(24));
         var second = auction.createQuote(calculation, NOW.plusSeconds(60), Duration.ofHours(24));
 
@@ -110,7 +167,8 @@ class AuctionLifecycleTest {
     @Test
     void rejectsAnExpiredQuote() {
         Auction auction = evaluatedAuction();
-        var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
         var quote = auction.createQuote(calculation, NOW, Duration.ofHours(24));
 
         assertThatThrownBy(() -> auction.acceptQuote(
@@ -121,7 +179,8 @@ class AuctionLifecycleTest {
 
     private Auction evaluatedAndPublishedAuction() {
         Auction auction = evaluatedAuction();
-        var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
         var quote = auction.createQuote(calculation, NOW, Duration.ofHours(24));
         auction.acceptQuote(quote.getId(), NOW, Duration.ofDays(7), Duration.ofDays(1), java.time.ZoneId.of("America/Lima"));
         return auction;

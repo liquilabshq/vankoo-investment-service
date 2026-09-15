@@ -19,6 +19,7 @@ Usa esta skill después de un review `APPROVED` y antes de cerrar una feature.
 5. Muestra el plan completo y espera aprobación explícita. Tras aprobar, procesa cada archivo:
    stagea solo ese archivo, crea el commit con `git commit -m`, comprueba su stat y registra los
    hashes en `progress.md`.
+6. No agregues a modelos de IA como coautor. 
 
 No uses `git add .`, `git add -A`, `git commit -a`, `--amend`, `--no-verify`, `--author` ni
 trailers de coautoría. No incluyas cambios no relacionados.
