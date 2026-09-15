@@ -112,6 +112,36 @@ class AuctionLifecycleTest {
     }
 
     @Test
+    void doesNotExpireAuctionsThatWereNeverPublished() {
+        Auction auction = evaluatedAuction();
+
+        boolean changed = auction.expireIfDue(NOW.plus(Duration.ofDays(365)));
+
+        assertThat(changed).isFalse();
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.DRAFT);
+        assertThat(auction.getExpiresAt()).isNull();
+    }
+
+    @Test
+    void doesNotExpireOrReEmitOnceAnAuctionAlreadyExpired() {
+        Auction auction = evaluatedAndPublishedAuction();
+        auction.addInvestment(
+                new UserId("investor-1"), new Money(new BigDecimal("500.00"), Currency.PEN),
+                new BigDecimal("500.00"), "tx-expiring", NOW.plusSeconds(1)
+        );
+        Instant expirationCheck = NOW.plus(Duration.ofDays(8));
+        boolean firstAttempt = auction.expireIfDue(expirationCheck);
+        Instant cancelledAtAfterFirstExpiration = auction.getCancelledAt();
+
+        boolean secondAttempt = auction.expireIfDue(expirationCheck.plus(Duration.ofDays(30)));
+
+        assertThat(firstAttempt).isTrue();
+        assertThat(secondAttempt).isFalse();
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.EXPIRED);
+        assertThat(auction.getCancelledAt()).isEqualTo(cancelledAtAfterFirstExpiration);
+    }
+
+    @Test
     void rejectsEvaluationWhenTheFullBalanceIsNotOutstanding() {
         Auction auction = newAuction();
         assertThatThrownBy(() -> auction.evaluate("risk-1", ScoreGrade.A, false, NOW))
