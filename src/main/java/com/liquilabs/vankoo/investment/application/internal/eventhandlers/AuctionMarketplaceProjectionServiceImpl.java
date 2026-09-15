@@ -7,12 +7,14 @@ import com.liquilabs.vankoo.investment.domain.model.valueobjects.Currency;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.ScoreGrade;
 import com.liquilabs.vankoo.investment.domain.services.AuctionMarketplaceProjectionService;
 import com.liquilabs.vankoo.investment.infrastructure.messaging.projection.AuctionLifecycleEventParser;
+import com.liquilabs.vankoo.investment.infrastructure.messaging.projection.MarketplaceProjectionUpdatedEvent;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.AuctionMarketplaceViewEntity;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.AuctionMarketplaceViewRepository;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.MarketplaceProcessedEvent;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.MarketplaceProcessedEventRepository;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.MarketplaceProcessedEventStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -29,17 +31,20 @@ public class AuctionMarketplaceProjectionServiceImpl implements AuctionMarketpla
     private final AuctionMarketplaceViewRepository viewRepository;
     private final MarketplaceProcessedEventRepository processedEventRepository;
     private final AuctionLifecycleEventParser eventParser;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     public AuctionMarketplaceProjectionServiceImpl(
             AuctionMarketplaceViewRepository viewRepository,
             MarketplaceProcessedEventRepository processedEventRepository,
             AuctionLifecycleEventParser eventParser,
+            ApplicationEventPublisher eventPublisher,
             Clock clock
     ) {
         this.viewRepository = viewRepository;
         this.processedEventRepository = processedEventRepository;
         this.eventParser = eventParser;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
 
@@ -58,6 +63,7 @@ public class AuctionMarketplaceProjectionServiceImpl implements AuctionMarketpla
         if (apply(command)) {
             inboxEvent.markApplied(now);
             drainDeferredEvents(command.aggregateId(), now);
+            eventPublisher.publishEvent(new MarketplaceProjectionUpdatedEvent(command.aggregateId()));
         } else {
             inboxEvent.defer(MISSING_PUBLISHED_VIEW);
         }
