@@ -20,7 +20,7 @@
         "Las pruebas cubren la emisión de PartitionAddedEvent y AuctionFullyFundedEvent al completar el monto objetivo.",
         "mvn test termina correctamente."
       ],
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": 2,
