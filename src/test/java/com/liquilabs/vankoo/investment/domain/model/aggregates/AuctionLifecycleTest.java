@@ -21,6 +21,31 @@ class AuctionLifecycleTest {
     private final AuctionPricingCalculator calculator = new AuctionPricingCalculator(AuctionPricingCalculatorTest.properties());
 
     @Test
+    void startsInPendingVerificationRiskWithNoFundingAndNoRiskGrade() {
+        Auction auction = newAuction();
+
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.PENDING_VERIFICATION_RISK);
+        assertThat(auction.getCurrentFunding().amount()).isEqualByComparingTo("0.00");
+        assertThat(auction.getCurrentFunding().currency()).isEqualTo(Currency.PEN);
+        assertThat(auction.getRiskScore().grade()).isEqualTo(ScoreGrade.UNDER_EVALUATION);
+        assertThat(auction.getFundableAmount()).isNull();
+        assertThat(auction.getPartitions()).isEmpty();
+    }
+
+    @Test
+    void rejectsAnInvestmentBelowTheMinimumTicketWhenThereIsAmpleFundingRoomLeft() {
+        Auction auction = evaluatedAndPublishedAuction();
+
+        assertThatThrownBy(() -> auction.addInvestment(
+                new UserId("investor-1"), new Money(new BigDecimal("200.00"), Currency.PEN),
+                new BigDecimal("500.00"), "tx-below-minimum", NOW.plusSeconds(1)
+        )).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("minimum");
+
+        assertThat(auction.getCurrentFunding().amount()).isEqualByComparingTo("0.00");
+        assertThat(auction.getPartitions()).isEmpty();
+    }
+
+    @Test
     void acceptsAQuoteAndAllocatesTheReceivableExactlyAcrossPartitions() {
         Auction auction = evaluatedAuction();
         var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
