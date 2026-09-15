@@ -13,11 +13,12 @@
 
 ## Plan
 
-- Pendiente de seleccionar la siguiente feature del track Dev 2.
+- Track Dev 2 finalizado.
 
 ## Notas de la sesión
 
-- Features 2, 4, 5 y 6 cerradas y archivadas en esta rama.
+- Features 2, 4, 5, 6 y 7 cerradas y archivadas en esta rama.
+- `origin/develop` está integrado mediante `1e7773d`.
 
 ## Evidencia de aceptación
 
@@ -25,7 +26,7 @@
 
 ## Verificación
 
-- No aplica.
+- Suite combinado: 55 pruebas, 0 fallos y 0 errores.
 
 ## Bloqueos
 
@@ -33,4 +34,4 @@
 
 ## Cierre
 
-- Sesión lista para iniciar la feature 7.
+- Sesión terminada; árbol listo para revisión o publicación de la rama.

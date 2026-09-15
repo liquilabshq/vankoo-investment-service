@@ -98,7 +98,7 @@
         "La caché no sirve resultados más antiguos que el límite de frescura acordado y se invalida o vence correctamente tras cambios de la vista.",
         "Las pruebas cubren filtros, paginación, orden y semántica de caché; mvn test termina correctamente."
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 8,

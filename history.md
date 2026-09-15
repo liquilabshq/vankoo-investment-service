@@ -114,3 +114,17 @@ Formato de entrada:
   feature_list.json, progress.md.
 - Veredicto del reviewer: APPROVED
 - Commits: 12255d7, dc6e5a3, c185fa3, c31c7e1
+
+## 2026-09-14 — Feature 7 expose-paginated-marketplace-search-api — done
+- Resumen: se expuso Marketplace como consulta paginada sobre la proyección, con filtros JPA
+  combinables, estados terminales consultables, whitelist de orden, desempate estable y errores
+  HTTP 400. Se añadió caché Caffeine por query con TTL de 30 segundos e invalidación después del
+  commit de cada actualización proyectada.
+- Verificación: `mvn -o "-Dmaven.repo.local=C:\Users\user\.m2\repository" test` -> OK
+  (55 pruebas) después de integrar `origin/develop`.
+- Archivos tocados: modelos/query service de Marketplace, Specification/repositorio JPA,
+  controller/assembler/resource REST, configuración e invalidación Caffeine, documentación y
+  pruebas de integración.
+- Veredicto del reviewer: APPROVED.
+- Commits: `4b48c1a`, `7048c62`, `0dc8f2b`, `679499b`, `47f0358`, `b49bd38`.
+- Integración previa de `origin/develop`: `1e7773d`.
