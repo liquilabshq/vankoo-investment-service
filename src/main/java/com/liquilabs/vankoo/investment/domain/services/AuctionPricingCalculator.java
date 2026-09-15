@@ -2,8 +2,8 @@ package com.liquilabs.vankoo.investment.domain.services;
 
 import ch.obermuhlner.math.big.BigDecimalMath;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.Money;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.PricingParameters;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.ScoreGrade;
-import com.liquilabs.vankoo.investment.infrastructure.configuration.PricingProperties;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -19,13 +19,8 @@ public class AuctionPricingCalculator {
     private static final BigDecimal ONE = BigDecimal.ONE;
     private static final BigDecimal DAYS_PER_MONTH = new BigDecimal("30");
 
-    private final PricingProperties properties;
-
-    public AuctionPricingCalculator(PricingProperties properties) {
-        this.properties = properties;
-    }
-
     public FinancialCalculation calculate(
+            PricingParameters pricing,
             Money fundableAmount,
             ScoreGrade riskGrade,
             LocalDate valuationDate,
@@ -44,19 +39,19 @@ public class AuctionPricingCalculator {
         }
 
         BigDecimal face = money(fundableAmount.amount());
-        BigDecimal tea = properties.teaFor(riskGrade);
+        BigDecimal tea = pricing.teaFor(riskGrade);
         BigDecimal termExponent = BigDecimal.valueOf(days)
-                .divide(BigDecimal.valueOf(properties.dayCountBasis()), MATH_CONTEXT);
+                .divide(BigDecimal.valueOf(pricing.dayCountBasis()), MATH_CONTEXT);
         BigDecimal termRate = BigDecimalMath.pow(ONE.add(tea), termExponent, MATH_CONTEXT)
                 .subtract(ONE);
 
         BigDecimal fundingTarget = money(face.divide(ONE.add(termRate), MATH_CONTEXT));
         BigDecimal investorProfit = money(face.subtract(fundingTarget));
         BigDecimal feeBase = money(face
-                .multiply(properties.platformMonthlyFeeRate(), MATH_CONTEXT)
+                .multiply(pricing.platformMonthlyFeeRate(), MATH_CONTEXT)
                 .multiply(BigDecimal.valueOf(days), MATH_CONTEXT)
                 .divide(DAYS_PER_MONTH, MATH_CONTEXT));
-        BigDecimal feeTax = money(feeBase.multiply(properties.platformFeeTaxRate(), MATH_CONTEXT));
+        BigDecimal feeTax = money(feeBase.multiply(pricing.platformFeeTaxRate(), MATH_CONTEXT));
         BigDecimal feeTotal = money(feeBase.add(feeTax));
         BigDecimal mypeAdvance = money(fundingTarget.subtract(feeTotal));
 
@@ -65,7 +60,7 @@ public class AuctionPricingCalculator {
         }
 
         BigDecimal mypeCost = money(face.subtract(mypeAdvance));
-        BigDecimal annualizationExponent = BigDecimal.valueOf(properties.dayCountBasis())
+        BigDecimal annualizationExponent = BigDecimal.valueOf(pricing.dayCountBasis())
                 .divide(BigDecimal.valueOf(days), MATH_CONTEXT);
         BigDecimal mypeTcea = BigDecimalMath.pow(
                         face.divide(mypeAdvance, MATH_CONTEXT),
@@ -74,7 +69,7 @@ public class AuctionPricingCalculator {
                 .subtract(ONE);
 
         return new FinancialCalculation(
-                properties.version(),
+                pricing.version(),
                 riskGrade,
                 fundableAmount.currency(),
                 Math.toIntExact(days),
@@ -83,9 +78,9 @@ public class AuctionPricingCalculator {
                 rate(termRate),
                 fundingTarget,
                 investorProfit,
-                rate(properties.platformMonthlyFeeRate()),
+                rate(pricing.platformMonthlyFeeRate()),
                 feeBase,
-                rate(properties.platformFeeTaxRate()),
+                rate(pricing.platformFeeTaxRate()),
                 feeTax,
                 feeTotal,
                 mypeAdvance,
