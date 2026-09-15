@@ -1,11 +1,7 @@
 package com.liquilabs.vankoo.investment.application.internal.queryservices;
 
 import com.liquilabs.vankoo.investment.domain.model.aggregates.Auction;
-import com.liquilabs.vankoo.investment.domain.model.queries.AuctionMarketplaceView;
-import com.liquilabs.vankoo.investment.domain.model.queries.AuctionMarketplacePage;
-import com.liquilabs.vankoo.investment.domain.model.queries.GetAllActiveAuctionsQuery;
-import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionByIdQuery;
-import com.liquilabs.vankoo.investment.domain.model.queries.GetMarketplaceAuctionsQuery;
+import com.liquilabs.vankoo.investment.domain.model.queries.*;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
 import com.liquilabs.vankoo.investment.infrastructure.configuration.PricingProperties;
@@ -79,6 +75,15 @@ public class AuctionQueryServiceImpl implements AuctionQueryService {
                 page.getTotalPages(),
                 query.sortField().property() + "," + query.sortDirection().name().toLowerCase()
         );
+    }
+    @Override
+    public List<Auction> handle(GetAuctionsByMypeQuery query) {
+        return auctionRepository.findByMypeId(query.mypeId());
+    }
+
+    @Override
+    public List<Auction> handle(GetAuctionsByInvestorQuery query) {
+        return auctionRepository.findByInvestorParticipation(query.investorId());
     }
 
     private AuctionMarketplaceView toMarketplaceView(AuctionMarketplaceViewEntity auction, LocalDate today) {

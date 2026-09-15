@@ -1,10 +1,7 @@
 package com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.repositories;
 
 import com.liquilabs.vankoo.investment.domain.model.aggregates.Auction;
-import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
-import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
-import com.liquilabs.vankoo.investment.domain.model.valueobjects.InvoiceId;
-import com.liquilabs.vankoo.investment.domain.model.valueobjects.QuoteStatus;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -48,4 +45,11 @@ public interface AuctionRepository extends JpaRepository<Auction, AuctionId> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Auction a where a.id = :id")
     Optional<Auction> findByIdForUpdate(@Param("id") AuctionId id);
+
+    @EntityGraph(attributePaths = {"quotes", "partitions"})
+    List<Auction> findByMypeId(UserId mypeId);
+
+    @EntityGraph(attributePaths = {"quotes", "partitions"})
+    @Query("select distinct a from Auction a join a.partitions p where p.investorId = :investorId")
+    List<Auction> findByInvestorParticipation(@Param("investorId") UserId investorId);
 }

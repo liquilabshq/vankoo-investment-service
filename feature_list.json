@@ -111,7 +111,7 @@
         "Los contratos expresan ausencia, montos y filtros sin sentinelas ambiguos ni Optional usados como placeholder.",
         "Las pruebas cubren detalle, búsquedas por MYPE e inversionista, datos vacíos, autorización y estados activos; mvn test termina correctamente."
       ],
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": 9,

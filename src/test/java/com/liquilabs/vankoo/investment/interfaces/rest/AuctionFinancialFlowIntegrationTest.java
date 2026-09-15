@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liquilabs.vankoo.investment.domain.model.commands.*;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionFullyFundedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.PartitionAddedEvent;
+import com.liquilabs.vankoo.investment.domain.model.queries.GetAllActiveAuctionsQuery;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionByIdQuery;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
@@ -187,6 +188,81 @@ class AuctionFinancialFlowIntegrationTest {
         var auction = auctionQueryService.handle(new GetAuctionByIdQuery(auctionId)).orElseThrow();
         assertThat(auction.getCurrentFunding().amount()).isEqualByComparingTo("6000.00");
         assertThat(auction.getPartitions()).hasSize(1);
+    }
+
+    @Test
+    void returnsAuctionsForTheirOwningMypeAndRejectsOtherCallers() throws Exception {
+        var auctionId = auctionCommandService.handle(new CreateAuctionCommand(
+                new InvoiceId("invoice-mype-query"), new UserId("mype-query-owner"),
+                new Money(new BigDecimal("10000.00"), Currency.PEN), false,
+                "20123456789", "Pagador S.A.", LocalDate.of(2026, 11, 6)
+        ));
+
+        mockMvc.perform(get("/api/v1/auctions/mype/{mypeId}", "mype-query-owner")
+                        .header("X-User-Id", "mype-query-owner"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')]").exists());
+
+        mockMvc.perform(get("/api/v1/auctions/mype/{mypeId}", "mype-query-owner")
+                        .header("X-User-Id", "someone-else"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/auctions/mype/{mypeId}", "mype-query-owner"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void returnsAuctionsForAParticipatingInvestorAndRejectsOtherCallers() throws Exception {
+        var auctionId = auctionCommandService.handle(new CreateAuctionCommand(
+                new InvoiceId("invoice-investor-query"), new UserId("mype-investor-query"),
+                new Money(new BigDecimal("10000.00"), Currency.PEN), false,
+                "20123456789", "Pagador S.A.", LocalDate.of(2026, 11, 6)
+        ));
+        auctionCommandService.handle(new EvaluateAuctionCommand(
+                auctionId, "assessment-investor-query", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
+        ));
+        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(auctionId));
+        auctionCommandService.handle(new AcceptFinancialQuoteCommand(auctionId, quote.getId()));
+        auctionCommandService.handle(new AddPartitionCommand(
+                auctionId, new UserId("investor-query"),
+                new Money(new BigDecimal("500.00"), Currency.PEN), "tx-investor-query"
+        ));
+
+        mockMvc.perform(get("/api/v1/auctions/investor/{investorId}", "investor-query")
+                        .header("X-User-Id", "investor-query"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')]").exists());
+
+        mockMvc.perform(get("/api/v1/auctions/investor/{investorId}", "investor-query")
+                        .header("X-User-Id", "someone-else"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getAllActiveAuctionsQueryOnlyReturnsPublishedOrFundingAuctions() {
+        var pendingAuctionId = auctionCommandService.handle(new CreateAuctionCommand(
+                new InvoiceId("invoice-active-filter-pending"), new UserId("mype-active-filter"),
+                new Money(new BigDecimal("10000.00"), Currency.PEN), false,
+                "20123456789", "Pagador S.A.", LocalDate.of(2026, 11, 6)
+        ));
+
+        var activeAuctionId = auctionCommandService.handle(new CreateAuctionCommand(
+                new InvoiceId("invoice-active-filter-active"), new UserId("mype-active-filter"),
+                new Money(new BigDecimal("10000.00"), Currency.PEN), false,
+                "20123456789", "Pagador S.A.", LocalDate.of(2026, 11, 6)
+        ));
+        auctionCommandService.handle(new EvaluateAuctionCommand(
+                activeAuctionId, "assessment-active-filter", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
+        ));
+        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(activeAuctionId));
+        auctionCommandService.handle(new AcceptFinancialQuoteCommand(activeAuctionId, quote.getId()));
+
+        var activeIds = auctionQueryService.handle(new GetAllActiveAuctionsQuery()).stream()
+                .map(a -> a.getId().uuid())
+                .toList();
+
+        assertThat(activeIds).contains(activeAuctionId.uuid());
+        assertThat(activeIds).doesNotContain(pendingAuctionId.uuid());
     }
 
     @Test
