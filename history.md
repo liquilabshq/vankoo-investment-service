@@ -128,3 +128,23 @@ Formato de entrada:
 - Veredicto del reviewer: APPROVED.
 - Commits: `4b48c1a`, `7048c62`, `0dc8f2b`, `679499b`, `47f0358`, `b49bd38`.
 - Integración previa de `origin/develop`: `1e7773d`.
+
+## 2026-09-15 — Feature 8 expose-auction-detail-and-participant-query-apis — done
+- Resumen: se expusieron GET /auctions/mype/{mypeId} y GET /auctions/investor/{investorId} como
+  queries CQRS (GetAuctionsByMypeQuery, GetAuctionsByInvestorQuery) delegadas a
+  AuctionQueryServiceImpl; GET /auctions/{id} ya existía y se dejó sin el control de caller por
+  ser una vista general de detalle. Se agregó autorización vía UnauthorizedAccessException (403)
+  comparando el header X-User-Id contra el path variable en AuctionsController. AuctionRepository
+  ganó findByMypeId y findByInvestorParticipation con @EntityGraph(quotes, partitions) para evitar
+  LazyInitializationException fuera de la transacción (open-in-view: false). Se confirmó con test
+  explícito que GetAllActiveAuctionsQuery ya filtraba por estados activos (findByStatusIn) desde
+  antes de esta feature, sin exponer un endpoint nuevo para ello.
+- Verificación: mvn test (Maven 3.9.10, JDK 25) -> OK (60/60, BUILD SUCCESS; corrida por el
+  implementer y reejecutada de forma independiente por el reviewer).
+- Archivos tocados: AuctionQueryServiceImpl.java, AuctionQueryService.java,
+  UnauthorizedAccessException.java, GetAuctionsByInvestorQuery.java, GetAuctionsByMypeQuery.java,
+  AuctionRepository.java, GlobalExceptionHandler.java, AuctionsController.java,
+  AuctionRepositoryTest.java, AuctionFinancialFlowIntegrationTest.java, feature_list.json,
+  progress.md.
+- Veredicto del reviewer: APPROVED.
+- Commits: `fbae08f`, `be66536`, `a0934db`, `12bb71e`, `c027842`.
