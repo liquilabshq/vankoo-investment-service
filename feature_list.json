@@ -138,7 +138,7 @@
         "GET /actuator/health responde 200 con el servicio registrado en Eureka (discovery-server).",
         "docker-compose.yaml o compose.yaml no se agregan a este repo (vankoo-investment-service); la infraestructura vive únicamente en vankoo/infrastructure."
       ],
-      "status": "pending"
+      "status": "in_progress"
     }
   ]
 }
