@@ -43,9 +43,11 @@ class AuctionRepositoryTest {
                 dueDate
         );
         auction.evaluate("assessment-persistence", ScoreGrade.B, true, now);
-        var calculator = new AuctionPricingCalculator(AuctionPricingCalculatorTest.properties());
+        var calculator = new AuctionPricingCalculator();
         var quote = auction.createQuote(
-                calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), dueDate),
+                calculator.calculate(
+                        AuctionPricingCalculatorTest.pricingParameters(),
+                        auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), dueDate),
                 now,
                 Duration.ofHours(24)
         );
