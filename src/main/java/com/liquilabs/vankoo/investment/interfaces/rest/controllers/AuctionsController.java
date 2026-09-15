@@ -2,15 +2,14 @@ package com.liquilabs.vankoo.investment.interfaces.rest.controllers;
 
 import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
 import com.liquilabs.vankoo.investment.domain.model.commands.*;
-import com.liquilabs.vankoo.investment.domain.model.queries.AuctionMarketplaceView;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionByIdQuery;
-import com.liquilabs.vankoo.investment.domain.model.queries.GetMarketplaceAuctionsQuery;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
 import com.liquilabs.vankoo.investment.interfaces.rest.resources.*;
 import com.liquilabs.vankoo.investment.interfaces.rest.transform.CreateAuctionCommandFromResourceAssembler;
 import com.liquilabs.vankoo.investment.interfaces.rest.transform.CreatePartitionCommandFromResourceAssembler;
+import com.liquilabs.vankoo.investment.interfaces.rest.transform.MarketplaceQueryAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/auctions")
@@ -92,8 +90,18 @@ public class AuctionsController {
 
     @GetMapping("/marketplace")
     @Operation(summary = "List published auctions available for investment")
-    public List<AuctionMarketplaceView> getMarketplaceAuctions() {
-        return auctionQueryService.handle(new GetMarketplaceAuctionsQuery(Optional.empty(), Optional.empty()));
+    public MarketplacePageResource getMarketplaceAuctions(
+            @RequestParam(required = false) List<String> status,
+            @RequestParam(required = false) String currency,
+            @RequestParam(required = false) Boolean greenCertified,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "expiresAt,asc") String sort
+    ) {
+        var query = MarketplaceQueryAssembler.toQuery(
+                status, currency, greenCertified, page, size, sort
+        );
+        return MarketplacePageResource.from(auctionQueryService.handle(query));
     }
 
     private com.liquilabs.vankoo.investment.domain.model.aggregates.Auction findAuction(String auctionId) {
