@@ -124,7 +124,7 @@
         "La capa application (AuctionCommandServiceImpl) traduce PricingProperties al nuevo tipo de dominio antes de invocar AuctionPricingCalculator.calculate, sin duplicar reglas de negocio.",
         "AuctionPricingCalculatorTest y AuctionLifecycleTest se actualizan a la nueva firma y mvn test termina correctamente."
       ],
-      "status": "in_progress"
+      "status": "done"
     }
   ]
 }
