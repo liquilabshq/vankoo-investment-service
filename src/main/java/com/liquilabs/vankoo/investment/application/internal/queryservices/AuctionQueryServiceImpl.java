@@ -2,15 +2,21 @@ package com.liquilabs.vankoo.investment.application.internal.queryservices;
 
 import com.liquilabs.vankoo.investment.domain.model.aggregates.Auction;
 import com.liquilabs.vankoo.investment.domain.model.queries.AuctionMarketplaceView;
+import com.liquilabs.vankoo.investment.domain.model.queries.AuctionMarketplacePage;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAllActiveAuctionsQuery;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionByIdQuery;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetMarketplaceAuctionsQuery;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
 import com.liquilabs.vankoo.investment.infrastructure.configuration.PricingProperties;
+import com.liquilabs.vankoo.investment.infrastructure.configuration.MarketplaceCacheConfiguration;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.repositories.AuctionRepository;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.AuctionMarketplaceViewEntity;
 import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.AuctionMarketplaceViewRepository;
+import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.AuctionMarketplaceSpecifications;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,17 +60,25 @@ public class AuctionQueryServiceImpl implements AuctionQueryService {
     }
 
     @Override
-    public List<AuctionMarketplaceView> handle(GetMarketplaceAuctionsQuery query) {
+    @Cacheable(cacheNames = MarketplaceCacheConfiguration.MARKETPLACE_CACHE, key = "#query")
+    public AuctionMarketplacePage handle(GetMarketplaceAuctionsQuery query) {
         LocalDate today = LocalDate.now(clock.withZone(pricingProperties.pricingZone()));
-        return marketplaceViewRepository
-                .findByStatusInOrderByExpiresAtAscAuctionIdAsc(
-                        List.of(AuctionStatus.PUBLISHED, AuctionStatus.FUNDING)
-                )
-                .stream()
-                .filter(view -> query.currencyFilter().map(value -> value == view.getCurrency()).orElse(true))
-                .filter(view -> query.onlyGreenCertified().map(value -> !value || view.isGreenCertified()).orElse(true))
+        Sort.Direction direction = Sort.Direction.valueOf(query.sortDirection().name());
+        Sort sort = Sort.by(direction, query.sortField().property())
+                .and(Sort.by(Sort.Direction.ASC, "auctionId"));
+        PageRequest pageRequest = PageRequest.of(query.page(), query.size(), sort);
+        var page = marketplaceViewRepository.findAll(AuctionMarketplaceSpecifications.from(query), pageRequest);
+        var content = page.getContent().stream()
                 .map(view -> toMarketplaceView(view, today))
                 .toList();
+        return new AuctionMarketplacePage(
+                content,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                query.sortField().property() + "," + query.sortDirection().name().toLowerCase()
+        );
     }
 
     private AuctionMarketplaceView toMarketplaceView(AuctionMarketplaceViewEntity auction, LocalDate today) {
@@ -91,6 +105,7 @@ public class AuctionQueryServiceImpl implements AuctionQueryService {
                 auction.getRiskGrade(),
                 auction.getStatus(),
                 auction.getDueDate(),
+                auction.getPublishedAt(),
                 auction.getExpiresAt(),
                 auction.isGreenCertified()
         );
