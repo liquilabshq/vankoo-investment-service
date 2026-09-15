@@ -141,7 +141,8 @@ class AuctionFinancialFlowIntegrationTest {
         String marketplaceJson = mockMvc.perform(get("/api/v1/auctions/marketplace"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        JsonNode marketplaceAuction = StreamSupport.stream(objectMapper.readTree(marketplaceJson).spliterator(), false)
+        JsonNode marketplaceAuction = StreamSupport.stream(
+                        objectMapper.readTree(marketplaceJson).path("content").spliterator(), false)
                 .filter(node -> auctionId.equals(node.path("auctionId").asText()))
                 .findFirst()
                 .orElseThrow();
