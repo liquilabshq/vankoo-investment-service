@@ -18,7 +18,7 @@ class AuctionLifecycleTest {
 
     private static final Instant NOW = Instant.parse("2026-09-07T17:00:00Z");
     private static final LocalDate DUE_DATE = LocalDate.of(2026, 11, 6);
-    private final AuctionPricingCalculator calculator = new AuctionPricingCalculator(AuctionPricingCalculatorTest.properties());
+    private final AuctionPricingCalculator calculator = new AuctionPricingCalculator();
 
     @Test
     void startsInPendingVerificationRiskWithNoFundingAndNoRiskGrade() {
@@ -48,7 +48,8 @@ class AuctionLifecycleTest {
     @Test
     void acceptsAQuoteAndAllocatesTheReceivableExactlyAcrossPartitions() {
         Auction auction = evaluatedAuction();
-        var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
         var quote = auction.createQuote(calculation, NOW, Duration.ofHours(24));
 
         auction.acceptQuote(quote.getId(), NOW, Duration.ofDays(7), Duration.ofDays(1), java.time.ZoneId.of("America/Lima"));
@@ -121,7 +122,8 @@ class AuctionLifecycleTest {
     @Test
     void supersedesThePreviousUnacceptedQuote() {
         Auction auction = evaluatedAuction();
-        var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
         var first = auction.createQuote(calculation, NOW, Duration.ofHours(24));
         var second = auction.createQuote(calculation, NOW.plusSeconds(60), Duration.ofHours(24));
 
@@ -135,7 +137,8 @@ class AuctionLifecycleTest {
     @Test
     void rejectsAnExpiredQuote() {
         Auction auction = evaluatedAuction();
-        var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
         var quote = auction.createQuote(calculation, NOW, Duration.ofHours(24));
 
         assertThatThrownBy(() -> auction.acceptQuote(
@@ -146,7 +149,8 @@ class AuctionLifecycleTest {
 
     private Auction evaluatedAndPublishedAuction() {
         Auction auction = evaluatedAuction();
-        var calculation = calculator.calculate(auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
         var quote = auction.createQuote(calculation, NOW, Duration.ofHours(24));
         auction.acceptQuote(quote.getId(), NOW, Duration.ofDays(7), Duration.ofDays(1), java.time.ZoneId.of("America/Lima"));
         return auction;
