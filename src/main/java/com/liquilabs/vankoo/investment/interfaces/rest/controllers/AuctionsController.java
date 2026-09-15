@@ -1,9 +1,13 @@
 package com.liquilabs.vankoo.investment.interfaces.rest.controllers;
 
 import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
+import com.liquilabs.vankoo.investment.domain.exceptions.UnauthorizedAccessException;
 import com.liquilabs.vankoo.investment.domain.model.commands.*;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionByIdQuery;
+import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionsByInvestorQuery;
+import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionsByMypeQuery;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
+import com.liquilabs.vankoo.investment.domain.model.valueobjects.UserId;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
 import com.liquilabs.vankoo.investment.interfaces.rest.resources.*;
@@ -27,7 +31,10 @@ public class AuctionsController {
     private final AuctionCommandService auctionCommandService;
     private final AuctionQueryService auctionQueryService;
 
-    public AuctionsController(AuctionCommandService auctionCommandService, AuctionQueryService auctionQueryService) {
+    public AuctionsController(
+            AuctionCommandService auctionCommandService,
+            AuctionQueryService auctionQueryService
+    ) {
         this.auctionCommandService = auctionCommandService;
         this.auctionQueryService = auctionQueryService;
     }
@@ -102,6 +109,36 @@ public class AuctionsController {
                 status, currency, greenCertified, page, size, sort
         );
         return MarketplacePageResource.from(auctionQueryService.handle(query));
+    }
+
+    @GetMapping("/mype/{mypeId}")
+    @Operation(summary = "List auctions owned by a MYPE")
+    public List<AuctionDetailsResource> getAuctionsByMype(
+            @PathVariable String mypeId,
+            @RequestHeader(value = "X-User-Id", required = false) String callerId
+    ) {
+        requireCaller(mypeId, callerId);
+        return auctionQueryService.handle(new GetAuctionsByMypeQuery(new UserId(mypeId))).stream()
+                .map(AuctionDetailsResource::from)
+                .toList();
+    }
+
+    @GetMapping("/investor/{investorId}")
+    @Operation(summary = "List auctions an investor has participated in")
+    public List<AuctionDetailsResource> getAuctionsByInvestor(
+            @PathVariable String investorId,
+            @RequestHeader(value = "X-User-Id", required = false) String callerId
+    ) {
+        requireCaller(investorId, callerId);
+        return auctionQueryService.handle(new GetAuctionsByInvestorQuery(new UserId(investorId))).stream()
+                .map(AuctionDetailsResource::from)
+                .toList();
+    }
+
+    private void requireCaller(String expectedUserId, String callerId) {
+        if (callerId == null || !callerId.equals(expectedUserId)) {
+            throw new UnauthorizedAccessException("Caller is not authorized to view this resource");
+        }
     }
 
     private com.liquilabs.vankoo.investment.domain.model.aggregates.Auction findAuction(String auctionId) {
