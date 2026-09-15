@@ -33,7 +33,7 @@
         "Se define cómo se reinicia o reconstruye la proyección sin mezclar eventos de dominio con contratos de integración.",
         "Se identifica el consumidor, topic, clave de partición, versión y política de evolución de cada evento requerido."
       ],
-      "status": "blocked"
+      "status": "done"
     },
     {
       "id": 3,
@@ -59,7 +59,7 @@
         "Se documentan semánticas at-least-once, deduplicación por eventId y orden por auctionId para consumidores.",
         "El contrato es revisable por los equipos consumidores antes de congelarse."
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 5,
@@ -72,7 +72,7 @@
         "El reintento no crea eventos lógicamente duplicados para un mismo eventId y deja trazabilidad de fallos recuperables.",
         "Las pruebas verifican serialización, clave, conversión y comportamiento ante reintentos; mvn test termina correctamente."
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 6,
@@ -85,7 +85,7 @@
         "Se define y prueba el comportamiento ante eventos fuera de orden, evento desconocido y replay completo.",
         "La vista puede reconstruirse sin datos manuales y las pruebas de proyección terminan correctamente."
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 7,
@@ -98,7 +98,7 @@
         "La caché no sirve resultados más antiguos que el límite de frescura acordado y se invalida o vence correctamente tras cambios de la vista.",
         "Las pruebas cubren filtros, paginación, orden y semántica de caché; mvn test termina correctamente."
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 8,

@@ -9,30 +9,29 @@
 
 ## Rama
 
-- No aplica.
+- `feature/investment-outbox-events`.
 
 ## Plan
 
--
+- Track Dev 2 finalizado.
 
 ## Notas de la sesión
 
--
+- Features 2, 4, 5, 6 y 7 cerradas y archivadas en esta rama.
+- `origin/develop` está integrado mediante `1e7773d`.
 
 ## Evidencia de aceptación
 
--
+- No aplica.
 
 ## Verificación
 
-- Comando: —
-- Resultado: —
-- Verificación manual: —
+- Suite combinado: 55 pruebas, 0 fallos y 0 errores.
 
 ## Bloqueos
 
--
+- Ninguno.
 
 ## Cierre
 
-- Pendiente: feature activa, reviewer y decisión de commits.
+- Sesión terminada; árbol listo para revisión o publicación de la rama.

@@ -12,6 +12,8 @@ spring:
   flyway:
     enabled: false
   cloud:
+    function:
+      definition: processInvoiceEligibleForFunding;projectAuctionMarketplace
     discovery:
       enabled: false
     stream:

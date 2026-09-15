@@ -7,6 +7,7 @@ import com.liquilabs.vankoo.investment.domain.model.events.AuctionCancelledEvent
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionClosedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionExpiredEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionFullyFundedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionPublishedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.PartitionAddedEvent;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.FinancialCalculation;
@@ -169,10 +170,11 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         this.currentFunding = new Money(ZERO.setScale(2), invoiceAmount.currency());
     }
 
-    public void registerAuctionCreatedEvent() {
+    public void registerAuctionCreatedEvent(Instant occurredAt) {
         registerEvent(new AuctionCreatedEvent(
                 id.uuid(), invoiceId.uuid(), mypeId.uuid(), payerRuc, payerName,
-                dueDate, invoiceAmount.amount(), invoiceAmount.currency().name(), status, greenCertified
+                dueDate, invoiceAmount.amount(), invoiceAmount.currency().name(), status, greenCertified,
+                Objects.requireNonNull(occurredAt)
         ));
     }
 
@@ -261,6 +263,13 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         status = AuctionStatus.PUBLISHED;
         publishedAt = now;
         expiresAt = calculatedExpiration;
+        registerEvent(new AuctionPublishedEvent(
+                id.uuid(), invoiceId.uuid(), mypeId.uuid(), payerRuc, payerName, dueDate,
+                invoiceAmount.amount(), fundableAmount.amount(), targetAmount.amount(),
+                currentFunding.amount(), targetAmount.currency().name(), quote.getInvestorTea(),
+                quote.getInvestorTermRate(), quote.getTermDays(), riskScore.grade(), status,
+                greenCertified, publishedAt, expiresAt
+        ));
     }
 
     public Partition addInvestment(
@@ -340,12 +349,12 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         status = AuctionStatus.FUNDING;
 
         registerEvent(new PartitionAddedEvent(
-                id.uuid(), partition.getId().uuid(), amount.amount(), currentFunding.amount()
+                id.uuid(), partition.getId().uuid(), amount.amount(), currentFunding.amount(), now
         ));
 
         if (isFunded()) {
             status = AuctionStatus.FULLY_FUNDED;
-            registerEvent(new AuctionFullyFundedEvent(id.uuid()));
+            registerEvent(new AuctionFullyFundedEvent(id.uuid(), now));
         }
         return partition;
     }

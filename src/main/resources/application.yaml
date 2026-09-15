@@ -5,6 +5,34 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
     driver-class-name: oracle.jdbc.OracleDriver
+  cloud:
+    function:
+      definition: processInvoiceEligibleForFunding;projectAuctionMarketplace
+    stream:
+      bindings:
+        auctionLifecycle-out-0:
+          destination: investment.auction-lifecycle.v1
+          content-type: application/json
+        projectAuctionMarketplace-in-0:
+          destination: investment.auction-lifecycle.v1
+          group: investment-marketplace-v1
+          content-type: application/json
+          consumer:
+            max-attempts: 3
+      kafka:
+        binder:
+          auto-create-topics: false
+          producer-properties:
+            acks: all
+            enable.idempotence: true
+        bindings:
+          auctionLifecycle-out-0:
+            producer:
+              sync: true
+          projectAuctionMarketplace-in-0:
+            consumer:
+              enable-dlq: true
+              dlq-name: investment.auction-lifecycle.v1.dlq
   jpa:
     show-sql: true
     hibernate:
@@ -52,3 +80,8 @@ vankoo:
         USD: ${INVESTMENT_MINIMUM_USD:15.00}
     lifecycle:
       expiration-check-delay: ${INVESTMENT_EXPIRATION_CHECK_DELAY:PT1M}
+    outbox:
+      publish-delay: ${INVESTMENT_OUTBOX_PUBLISH_DELAY:PT1S}
+      cleanup-delay: ${INVESTMENT_OUTBOX_CLEANUP_DELAY:PT1H}
+      batch-size: ${INVESTMENT_OUTBOX_BATCH_SIZE:50}
+      published-retention: ${INVESTMENT_OUTBOX_PUBLISHED_RETENTION:P7D}
