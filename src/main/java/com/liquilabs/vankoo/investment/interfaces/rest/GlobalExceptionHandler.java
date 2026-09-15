@@ -1,6 +1,7 @@
 package com.liquilabs.vankoo.investment.interfaces.rest;
 
 import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
+import com.liquilabs.vankoo.investment.domain.exceptions.UnauthorizedAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +34,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleDataConflict(DataIntegrityViolationException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("message", "Resource conflicts with existing data"));
+    }
+
+    @ExceptionHandler(UnauthorizedAccessException.class)
+    public ResponseEntity<Map<String, String>> handleUnauthorized(UnauthorizedAccessException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
