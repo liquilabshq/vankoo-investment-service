@@ -85,6 +85,7 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
     @Transactional
     public AuctionFinancialQuote handle(CreateFinancialQuoteCommand command) {
         Auction auction = locked(command.auctionId());
+        auction.ensureOwnedBy(command.requesterId());
         if (auction.getStatus() != AuctionStatus.DRAFT
                 || !auction.isFullBalanceOutstandingConfirmed()
                 || auction.getFundableAmount() == null) {
@@ -115,6 +116,7 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
     @Transactional
     public Auction handle(AcceptFinancialQuoteCommand command) {
         Auction auction = locked(command.auctionId());
+        auction.ensureOwnedBy(command.requesterId());
         auction.acceptQuote(
                 command.quoteId(),
                 clock.instant(),

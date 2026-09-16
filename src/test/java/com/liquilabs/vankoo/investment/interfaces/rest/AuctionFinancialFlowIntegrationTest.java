@@ -103,7 +103,8 @@ class AuctionFinancialFlowIntegrationTest {
                 .andExpect(jsonPath("$.status").value("DRAFT"))
                 .andExpect(jsonPath("$.fullBalanceOutstandingConfirmed").value(true));
 
-        String quoteJson = mockMvc.perform(post("/api/v1/auctions/{auctionId}/quotes", auctionId))
+        String quoteJson = mockMvc.perform(post("/api/v1/auctions/{auctionId}/quotes", auctionId)
+                        .header("X-User-Id", "mype-http-flow"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.investorTeaPct").value(15.000000))
                 .andExpect(jsonPath("$.fundingTarget").value(9769.76))
@@ -114,7 +115,8 @@ class AuctionFinancialFlowIntegrationTest {
         JsonNode quote = objectMapper.readTree(quoteJson);
         String quoteId = quote.get("quoteId").asText();
 
-        mockMvc.perform(post("/api/v1/auctions/{auctionId}/quotes/{quoteId}/accept", auctionId, quoteId))
+        mockMvc.perform(post("/api/v1/auctions/{auctionId}/quotes/{quoteId}/accept", auctionId, quoteId)
+                        .header("X-User-Id", "mype-http-flow"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PUBLISHED"))
                 .andExpect(jsonPath("$.acceptedQuote.quoteId").value(quoteId));
@@ -165,8 +167,8 @@ class AuctionFinancialFlowIntegrationTest {
         auctionCommandService.handle(new EvaluateAuctionCommand(
                 auctionId, "assessment-concurrency", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
         ));
-        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(auctionId));
-        auctionCommandService.handle(new AcceptFinancialQuoteCommand(auctionId, quote.getId()));
+        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(auctionId, new UserId("mype-concurrency")));
+        auctionCommandService.handle(new AcceptFinancialQuoteCommand(auctionId, quote.getId(), new UserId("mype-concurrency")));
 
         try (var executor = Executors.newFixedThreadPool(2)) {
             List<Callable<Boolean>> investments = List.of(
@@ -188,6 +190,39 @@ class AuctionFinancialFlowIntegrationTest {
         var auction = auctionQueryService.handle(new GetAuctionByIdQuery(auctionId)).orElseThrow();
         assertThat(auction.getCurrentFunding().amount()).isEqualByComparingTo("6000.00");
         assertThat(auction.getPartitions()).hasSize(1);
+    }
+
+    @Test
+    void onlyTheOwningMypeCanQuoteAndAcceptIt() throws Exception {
+        var auctionId = auctionCommandService.handle(new CreateAuctionCommand(
+                new InvoiceId("invoice-quote-owner"), new UserId("mype-quote-owner"),
+                new Money(new BigDecimal("10000.00"), Currency.PEN), false,
+                "20123456789", "Pagador S.A.", LocalDate.of(2026, 11, 6)
+        ));
+        auctionCommandService.handle(new EvaluateAuctionCommand(
+                auctionId, "assessment-quote-owner", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
+        ));
+        String quotes = "/api/v1/auctions/{auctionId}/quotes";
+
+        mockMvc.perform(post(quotes, auctionId.uuid()).header("X-User-Id", "someone-else"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(quotes, auctionId.uuid()))
+                .andExpect(status().isForbidden());
+
+        String quoteId = objectMapper.readTree(
+                mockMvc.perform(post(quotes, auctionId.uuid()).header("X-User-Id", "mype-quote-owner"))
+                        .andExpect(status().isCreated())
+                        .andReturn().getResponse().getContentAsString()
+        ).get("quoteId").asText();
+
+        String accept = "/api/v1/auctions/{auctionId}/quotes/{quoteId}/accept";
+        mockMvc.perform(post(accept, auctionId.uuid(), quoteId).header("X-User-Id", "someone-else"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(accept, auctionId.uuid(), quoteId))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(accept, auctionId.uuid(), quoteId).header("X-User-Id", "mype-quote-owner"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
     }
 
     @Test
@@ -221,8 +256,8 @@ class AuctionFinancialFlowIntegrationTest {
         auctionCommandService.handle(new EvaluateAuctionCommand(
                 auctionId, "assessment-investor-query", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
         ));
-        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(auctionId));
-        auctionCommandService.handle(new AcceptFinancialQuoteCommand(auctionId, quote.getId()));
+        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(auctionId, new UserId("mype-investor-query")));
+        auctionCommandService.handle(new AcceptFinancialQuoteCommand(auctionId, quote.getId(), new UserId("mype-investor-query")));
         auctionCommandService.handle(new AddPartitionCommand(
                 auctionId, new UserId("investor-query"),
                 new Money(new BigDecimal("500.00"), Currency.PEN), "tx-investor-query"
@@ -254,8 +289,8 @@ class AuctionFinancialFlowIntegrationTest {
         auctionCommandService.handle(new EvaluateAuctionCommand(
                 activeAuctionId, "assessment-active-filter", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
         ));
-        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(activeAuctionId));
-        auctionCommandService.handle(new AcceptFinancialQuoteCommand(activeAuctionId, quote.getId()));
+        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(activeAuctionId, new UserId("mype-active-filter")));
+        auctionCommandService.handle(new AcceptFinancialQuoteCommand(activeAuctionId, quote.getId(), new UserId("mype-active-filter")));
 
         var activeIds = auctionQueryService.handle(new GetAllActiveAuctionsQuery()).stream()
                 .map(a -> a.getId().uuid())
@@ -275,8 +310,8 @@ class AuctionFinancialFlowIntegrationTest {
         auctionCommandService.handle(new EvaluateAuctionCommand(
                 auctionId, "assessment-events", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
         ));
-        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(auctionId));
-        auctionCommandService.handle(new AcceptFinancialQuoteCommand(auctionId, quote.getId()));
+        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(auctionId, new UserId("mype-events")));
+        auctionCommandService.handle(new AcceptFinancialQuoteCommand(auctionId, quote.getId(), new UserId("mype-events")));
 
         auctionCommandService.handle(new AddPartitionCommand(
                 auctionId, new UserId("investor-events-1"),

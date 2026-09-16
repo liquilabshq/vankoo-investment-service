@@ -1,5 +1,6 @@
 package com.liquilabs.vankoo.investment.domain.model.aggregates;
 
+import com.liquilabs.vankoo.investment.domain.exceptions.UnauthorizedAccessException;
 import com.liquilabs.vankoo.investment.domain.model.entities.Partition;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.AuctionPricingCalculator;
@@ -175,6 +176,17 @@ class AuctionLifecycleTest {
                 quote.getId(), NOW.plus(Duration.ofHours(25)), Duration.ofDays(7), Duration.ofDays(1), java.time.ZoneId.of("America/Lima")
         )).isInstanceOf(IllegalStateException.class).hasMessageContaining("not active");
         assertThat(quote.getStatus()).isEqualTo(QuoteStatus.EXPIRED);
+    }
+
+    @Test
+    void rejectsARequesterThatDoesNotOwnTheAuction() {
+        Auction auction = newAuction();
+
+        auction.ensureOwnedBy(new UserId("mype-1"));
+        assertThatThrownBy(() -> auction.ensureOwnedBy(new UserId("mype-2")))
+                .isInstanceOf(UnauthorizedAccessException.class);
+        assertThatThrownBy(() -> auction.ensureOwnedBy(null))
+                .isInstanceOf(UnauthorizedAccessException.class);
     }
 
     private Auction evaluatedAndPublishedAuction() {

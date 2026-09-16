@@ -56,16 +56,25 @@ public class AuctionsController {
     @PostMapping("/{auctionId}/quotes")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a 24-hour financial quote for an evaluated auction")
-    public FinancialQuoteResource createQuote(@PathVariable String auctionId) {
-        var quote = auctionCommandService.handle(new CreateFinancialQuoteCommand(new AuctionId(auctionId)));
+    public FinancialQuoteResource createQuote(
+            @PathVariable String auctionId,
+            @RequestHeader(value = "X-User-Id", required = false) String callerId
+    ) {
+        var quote = auctionCommandService.handle(
+                new CreateFinancialQuoteCommand(new AuctionId(auctionId), requester(callerId))
+        );
         return FinancialQuoteResource.from(quote);
     }
 
     @PostMapping("/{auctionId}/quotes/{quoteId}/accept")
     @Operation(summary = "Accept a financial quote and publish the auction")
-    public AuctionDetailsResource acceptQuote(@PathVariable String auctionId, @PathVariable String quoteId) {
+    public AuctionDetailsResource acceptQuote(
+            @PathVariable String auctionId,
+            @PathVariable String quoteId,
+            @RequestHeader(value = "X-User-Id", required = false) String callerId
+    ) {
         var auction = auctionCommandService.handle(
-                new AcceptFinancialQuoteCommand(new AuctionId(auctionId), quoteId)
+                new AcceptFinancialQuoteCommand(new AuctionId(auctionId), quoteId, requester(callerId))
         );
         return AuctionDetailsResource.from(auction);
     }
@@ -139,6 +148,14 @@ public class AuctionsController {
         if (callerId == null || !callerId.equals(expectedUserId)) {
             throw new UnauthorizedAccessException("Caller is not authorized to view this resource");
         }
+    }
+
+    /** The gateway injects X-User-Id from the JWT; without it nobody can be the owner. */
+    private UserId requester(String callerId) {
+        if (callerId == null || callerId.isBlank()) {
+            throw new UnauthorizedAccessException("Caller is not identified");
+        }
+        return new UserId(callerId);
     }
 
     private com.liquilabs.vankoo.investment.domain.model.aggregates.Auction findAuction(String auctionId) {
