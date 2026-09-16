@@ -1,5 +1,6 @@
 package com.liquilabs.vankoo.investment.domain.model.aggregates;
 
+import com.liquilabs.vankoo.investment.domain.exceptions.UnauthorizedAccessException;
 import com.liquilabs.vankoo.investment.domain.model.entities.AuctionFinancialQuote;
 import com.liquilabs.vankoo.investment.domain.model.entities.Partition;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCreatedEvent;
@@ -421,6 +422,25 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
 
     public boolean isFunded() {
         return targetAmount != null && !currentFunding.isLessThan(targetAmount);
+    }
+
+    /**
+     * Only the MYPE that owns the invoice may quote or publish its auction: both change
+     * what investors will be offered, and a new quote supersedes the one the MYPE is
+     * looking at.
+     */
+    public void ensureOwnedBy(UserId requesterId) {
+        if (requesterId == null || !mypeId.equals(requesterId)) {
+            throw new UnauthorizedAccessException("Caller does not own this auction");
+        }
+    }
+
+    /**
+     * The quote the MYPE can still accept, if any. At most one is active: creating a quote
+     * supersedes the previous one, and accepting it or re-evaluating the auction ends it.
+     */
+    public Optional<AuctionFinancialQuote> activeQuote(Instant now) {
+        return quotes.stream().filter(quote -> quote.isActiveAt(now)).findFirst();
     }
 
     public AuctionFinancialQuote acceptedQuote() {

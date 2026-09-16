@@ -1,6 +1,8 @@
 package com.liquilabs.vankoo.investment.application.internal.queryservices;
 
+import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
 import com.liquilabs.vankoo.investment.domain.model.aggregates.Auction;
+import com.liquilabs.vankoo.investment.domain.model.entities.AuctionFinancialQuote;
 import com.liquilabs.vankoo.investment.domain.model.queries.*;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
@@ -48,6 +50,14 @@ public class AuctionQueryServiceImpl implements AuctionQueryService {
     @Override
     public Optional<Auction> handle(GetAuctionByIdQuery query) {
         return auctionRepository.findDetailedById(query.auctionId());
+    }
+
+    @Override
+    public Optional<AuctionFinancialQuote> handle(GetActiveFinancialQuoteQuery query) {
+        Auction auction = auctionRepository.findDetailedById(query.auctionId())
+                .orElseThrow(() -> new AuctionNotFoundException(query.auctionId().uuid()));
+        auction.ensureOwnedBy(query.requesterId());
+        return auction.activeQuote(clock.instant());
     }
 
     @Override

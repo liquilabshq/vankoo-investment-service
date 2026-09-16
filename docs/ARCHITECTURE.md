@@ -77,5 +77,8 @@ eventos actuales son `AuctionCreatedEvent`, `PartitionAddedEvent` y
 La propiedad, consistencia eventual, consulta, stream de integración y procedimiento de replay del
 read model están definidos en [`MARKETPLACE_READ_MODEL.md`](MARKETPLACE_READ_MODEL.md).
 
+Mientras no exista un servicio de riesgo, las subastas se evalúan con un sustituto temporal
+descrito en [`SIMULATED_RISK_EVALUATION.md`](SIMULATED_RISK_EVALUATION.md).
+
 La entrega at-least-once de sus eventos de integración mediante Oracle y Kafka se describe en
 [`AUCTION_OUTBOX.md`](AUCTION_OUTBOX.md).

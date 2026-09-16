@@ -1,5 +1,6 @@
 package com.liquilabs.vankoo.investment.domain.model.aggregates;
 
+import com.liquilabs.vankoo.investment.domain.exceptions.UnauthorizedAccessException;
 import com.liquilabs.vankoo.investment.domain.model.entities.Partition;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.AuctionPricingCalculator;
@@ -175,6 +176,34 @@ class AuctionLifecycleTest {
                 quote.getId(), NOW.plus(Duration.ofHours(25)), Duration.ofDays(7), Duration.ofDays(1), java.time.ZoneId.of("America/Lima")
         )).isInstanceOf(IllegalStateException.class).hasMessageContaining("not active");
         assertThat(quote.getStatus()).isEqualTo(QuoteStatus.EXPIRED);
+    }
+
+    @Test
+    void exposesOnlyTheQuoteThatCanStillBeAccepted() {
+        Auction auction = evaluatedAuction();
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        assertThat(auction.activeQuote(NOW)).isEmpty();
+
+        auction.createQuote(calculation, NOW, Duration.ofHours(24));
+        var second = auction.createQuote(calculation, NOW.plusSeconds(60), Duration.ofHours(24));
+
+        assertThat(auction.activeQuote(NOW.plusSeconds(120))).contains(second);
+        assertThat(auction.activeQuote(NOW.plus(Duration.ofHours(25)))).isEmpty();
+
+        auction.acceptQuote(second.getId(), NOW.plusSeconds(120), Duration.ofDays(7), Duration.ofDays(1), java.time.ZoneId.of("America/Lima"));
+        assertThat(auction.activeQuote(NOW.plusSeconds(180))).isEmpty();
+    }
+
+    @Test
+    void rejectsARequesterThatDoesNotOwnTheAuction() {
+        Auction auction = newAuction();
+
+        auction.ensureOwnedBy(new UserId("mype-1"));
+        assertThatThrownBy(() -> auction.ensureOwnedBy(new UserId("mype-2")))
+                .isInstanceOf(UnauthorizedAccessException.class);
+        assertThatThrownBy(() -> auction.ensureOwnedBy(null))
+                .isInstanceOf(UnauthorizedAccessException.class);
     }
 
     private Auction evaluatedAndPublishedAuction() {

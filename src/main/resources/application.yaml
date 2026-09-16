@@ -71,6 +71,10 @@ scalar:
 
 vankoo:
   investment:
+    # TEMPORAL: sustituye al servicio de riesgo, que no existe todavía. Califica cada subasta
+    # nueva con una nota derivada de su id. Ver docs/SIMULATED_RISK_EVALUATION.md.
+    risk-simulation:
+      enabled: ${INVESTMENT_RISK_SIMULATION_ENABLED:false}
     pricing:
       version: ${INVESTMENT_PRICING_VERSION:demo-2026-09}
       zone-id: ${INVESTMENT_PRICING_ZONE:America/Lima}
