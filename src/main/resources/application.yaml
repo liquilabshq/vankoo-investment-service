@@ -29,6 +29,15 @@ spring:
           auctionLifecycle-out-0:
             producer:
               sync: true
+              configuration:
+                # OutboxPublisher pone el aggregateId, que es un String, en
+                # KafkaHeaders.KEY. El payload viaja como byte[], así que el binder
+                # elegía ByteArraySerializer para las dos mitades del mensaje y cada
+                # envío moría en un ClassCastException: la proyección del Marketplace
+                # no recibía nada y la búsqueda quedaba vacía para siempre.
+                # Va en este binding y no en producer-properties del binder para no
+                # imponerle el serializador a cualquier productor que se añada luego.
+                key.serializer: org.apache.kafka.common.serialization.StringSerializer
           projectAuctionMarketplace-in-0:
             consumer:
               enable-dlq: true
