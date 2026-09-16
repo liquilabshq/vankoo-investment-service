@@ -38,3 +38,10 @@ management:
     web:
       exposure:
        include: "health,info"
+
+vankoo:
+  investment:
+    # TEMPORAL: encendida en local para que las subastas lleguen al marketplace sin servicio de
+    # riesgo. Ver docs/SIMULATED_RISK_EVALUATION.md.
+    risk-simulation:
+      enabled: ${INVESTMENT_RISK_SIMULATION_ENABLED:true}

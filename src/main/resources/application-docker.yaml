@@ -45,3 +45,11 @@ management:
         # En Docker, es útil exponer todos los endpoints de gestión para monitoreo y debugging
         # Ya que la red es interna, no hay riesgo de exponer información sensible al exterior
         include: "*"
+
+vankoo:
+  investment:
+    # TEMPORAL: encendida en el compose para que la demo llegue al marketplace sin servicio de
+    # riesgo. Apágala con INVESTMENT_RISK_SIMULATION_ENABLED=false donde haga falta evaluar a
+    # mano. Ver docs/SIMULATED_RISK_EVALUATION.md.
+    risk-simulation:
+      enabled: ${INVESTMENT_RISK_SIMULATION_ENABLED:true}
