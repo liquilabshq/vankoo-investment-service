@@ -46,6 +46,12 @@ management:
         # Ya que la red es interna, no hay riesgo de exponer información sensible al exterior
         include: "*"
 
+documentation:
+  # Son URLs para el navegador de quien lee la documentación, no para los contenedores:
+  # por eso apuntan a los puertos publicados en el host.
+  local-url: http://${INVESTMENT_DOCUMENTATION_SERVER_URL:localhost}:${INVESTMENT_SERVICE_PORT:8082}
+  gateway-url: http://${INVESTMENT_DOCUMENTATION_GATEWAY_URL:localhost}:${API_GATEWAY_PORT:8080}/investment
+
 vankoo:
   investment:
     # TEMPORAL: encendida en el compose para que la demo llegue al marketplace sin servicio de
