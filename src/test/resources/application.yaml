@@ -29,6 +29,14 @@ authorization:
     expiration:
       days: 1
 
+documentation:
+  application:
+    title: Vankoo Investment Service
+    description: Test
+    version: test
+  local-url: http://localhost:8082
+  gateway-url: http://localhost:8080/investment
+
 vankoo:
   investment:
     pricing:
