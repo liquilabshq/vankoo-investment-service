@@ -1,5 +1,6 @@
 package com.liquilabs.vankoo.investment.interfaces.rest;
 
+import com.liquilabs.vankoo.investment.domain.exceptions.ActiveQuoteNotFoundException;
 import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
 import com.liquilabs.vankoo.investment.domain.exceptions.UnauthorizedAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -17,6 +18,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuctionNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleNotFound(AuctionNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+    }
+
+    @ExceptionHandler(ActiveQuoteNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNoActiveQuote(ActiveQuoteNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
     }
 

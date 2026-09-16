@@ -1,8 +1,10 @@
 package com.liquilabs.vankoo.investment.interfaces.rest.controllers;
 
+import com.liquilabs.vankoo.investment.domain.exceptions.ActiveQuoteNotFoundException;
 import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
 import com.liquilabs.vankoo.investment.domain.exceptions.UnauthorizedAccessException;
 import com.liquilabs.vankoo.investment.domain.model.commands.*;
+import com.liquilabs.vankoo.investment.domain.model.queries.GetActiveFinancialQuoteQuery;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionByIdQuery;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionsByInvestorQuery;
 import com.liquilabs.vankoo.investment.domain.model.queries.GetAuctionsByMypeQuery;
@@ -55,7 +57,7 @@ public class AuctionsController {
 
     @PostMapping("/{auctionId}/quotes")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a 24-hour financial quote for an evaluated auction")
+    @Operation(summary = "Create a 24-hour financial quote for an evaluated auction, superseding the active one")
     public FinancialQuoteResource createQuote(
             @PathVariable String auctionId,
             @RequestHeader(value = "X-User-Id", required = false) String callerId
@@ -63,6 +65,18 @@ public class AuctionsController {
         var quote = auctionCommandService.handle(
                 new CreateFinancialQuoteCommand(new AuctionId(auctionId), requester(callerId))
         );
+        return FinancialQuoteResource.from(quote);
+    }
+
+    @GetMapping("/{auctionId}/quotes/active")
+    @Operation(summary = "Get the quote the owning MYPE can still accept; 404 when there is none")
+    public FinancialQuoteResource getActiveQuote(
+            @PathVariable String auctionId,
+            @RequestHeader(value = "X-User-Id", required = false) String callerId
+    ) {
+        var quote = auctionQueryService.handle(
+                new GetActiveFinancialQuoteQuery(new AuctionId(auctionId), requester(callerId))
+        ).orElseThrow(() -> new ActiveQuoteNotFoundException(auctionId));
         return FinancialQuoteResource.from(quote);
     }
 

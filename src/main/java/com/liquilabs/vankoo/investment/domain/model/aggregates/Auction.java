@@ -435,6 +435,14 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         }
     }
 
+    /**
+     * The quote the MYPE can still accept, if any. At most one is active: creating a quote
+     * supersedes the previous one, and accepting it or re-evaluating the auction ends it.
+     */
+    public Optional<AuctionFinancialQuote> activeQuote(Instant now) {
+        return quotes.stream().filter(quote -> quote.isActiveAt(now)).findFirst();
+    }
+
     public AuctionFinancialQuote acceptedQuote() {
         if (acceptedQuoteId == null) {
             throw new IllegalStateException("Auction has no accepted financial quote");

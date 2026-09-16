@@ -193,7 +193,7 @@ class AuctionFinancialFlowIntegrationTest {
     }
 
     @Test
-    void onlyTheOwningMypeCanQuoteAndAcceptIt() throws Exception {
+    void onlyTheOwningMypeCanQuoteReadTheActiveQuoteAndAcceptIt() throws Exception {
         var auctionId = auctionCommandService.handle(new CreateAuctionCommand(
                 new InvoiceId("invoice-quote-owner"), new UserId("mype-quote-owner"),
                 new Money(new BigDecimal("10000.00"), Currency.PEN), false,
@@ -203,17 +203,30 @@ class AuctionFinancialFlowIntegrationTest {
                 auctionId, "assessment-quote-owner", ScoreGrade.B, true, Instant.parse("2026-09-07T17:00:00Z")
         ));
         String quotes = "/api/v1/auctions/{auctionId}/quotes";
+        String activeQuote = "/api/v1/auctions/{auctionId}/quotes/active";
 
         mockMvc.perform(post(quotes, auctionId.uuid()).header("X-User-Id", "someone-else"))
                 .andExpect(status().isForbidden());
         mockMvc.perform(post(quotes, auctionId.uuid()))
                 .andExpect(status().isForbidden());
 
+        mockMvc.perform(get(activeQuote, auctionId.uuid()).header("X-User-Id", "mype-quote-owner"))
+                .andExpect(status().isNotFound());
+
         String quoteId = objectMapper.readTree(
                 mockMvc.perform(post(quotes, auctionId.uuid()).header("X-User-Id", "mype-quote-owner"))
                         .andExpect(status().isCreated())
                         .andReturn().getResponse().getContentAsString()
         ).get("quoteId").asText();
+
+        mockMvc.perform(get(activeQuote, auctionId.uuid()).header("X-User-Id", "mype-quote-owner"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quoteId").value(quoteId))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+        mockMvc.perform(get(activeQuote, auctionId.uuid()).header("X-User-Id", "someone-else"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(activeQuote, auctionId.uuid()))
+                .andExpect(status().isForbidden());
 
         String accept = "/api/v1/auctions/{auctionId}/quotes/{quoteId}/accept";
         mockMvc.perform(post(accept, auctionId.uuid(), quoteId).header("X-User-Id", "someone-else"))
@@ -223,6 +236,11 @@ class AuctionFinancialFlowIntegrationTest {
         mockMvc.perform(post(accept, auctionId.uuid(), quoteId).header("X-User-Id", "mype-quote-owner"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PUBLISHED"));
+
+        mockMvc.perform(get(activeQuote, auctionId.uuid()).header("X-User-Id", "mype-quote-owner"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get(activeQuote, "missing-auction").header("X-User-Id", "mype-quote-owner"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

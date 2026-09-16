@@ -179,6 +179,23 @@ class AuctionLifecycleTest {
     }
 
     @Test
+    void exposesOnlyTheQuoteThatCanStillBeAccepted() {
+        Auction auction = evaluatedAuction();
+        var calculation = calculator.calculate(
+                AuctionPricingCalculatorTest.pricingParameters(), auction.getFundableAmount(), ScoreGrade.B, LocalDate.of(2026, 9, 7), DUE_DATE);
+        assertThat(auction.activeQuote(NOW)).isEmpty();
+
+        auction.createQuote(calculation, NOW, Duration.ofHours(24));
+        var second = auction.createQuote(calculation, NOW.plusSeconds(60), Duration.ofHours(24));
+
+        assertThat(auction.activeQuote(NOW.plusSeconds(120))).contains(second);
+        assertThat(auction.activeQuote(NOW.plus(Duration.ofHours(25)))).isEmpty();
+
+        auction.acceptQuote(second.getId(), NOW.plusSeconds(120), Duration.ofDays(7), Duration.ofDays(1), java.time.ZoneId.of("America/Lima"));
+        assertThat(auction.activeQuote(NOW.plusSeconds(180))).isEmpty();
+    }
+
+    @Test
     void rejectsARequesterThatDoesNotOwnTheAuction() {
         Auction auction = newAuction();
 
