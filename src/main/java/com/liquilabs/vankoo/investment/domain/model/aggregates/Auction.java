@@ -123,6 +123,12 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
     @Column(length = 500)
     private String cancellationReason;
 
+    @Column(length = 60)
+    private String rejectionReasonCode;
+
+    @Column(length = 500)
+    private String rejectionReason;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -135,6 +141,7 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
     private Instant expiresAt;
     private Instant closedAt;
     private Instant cancelledAt;
+    private Instant rejectedAt;
 
     @Version
     private long version;
@@ -215,6 +222,28 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         assessmentId = normalizedAssessmentId;
         assessedAt = Objects.requireNonNull(assessmentTime);
         status = AuctionStatus.DRAFT;
+    }
+
+    public void reject(String newAssessmentId, String reasonCode, String reason, Instant assessmentTime, Instant now) {
+        String normalizedAssessmentId = requireText(newAssessmentId, "Assessment ID");
+        String normalizedReasonCode = requireText(reasonCode, "Rejection reason code");
+        String normalizedReason = requireText(reason, "Rejection reason");
+        if (status == AuctionStatus.REJECTED) {
+            if (normalizedAssessmentId.equals(assessmentId) && normalizedReasonCode.equals(rejectionReasonCode)) {
+                return;
+            }
+            throw new IllegalStateException("Auction was already rejected by another assessment");
+        }
+        if (status != AuctionStatus.PENDING_VERIFICATION_RISK) {
+            throw new IllegalStateException("Only an auction awaiting its risk assessment can be rejected");
+        }
+
+        assessmentId = normalizedAssessmentId;
+        assessedAt = Objects.requireNonNull(assessmentTime, "Assessment time is required");
+        rejectionReasonCode = normalizedReasonCode;
+        rejectionReason = normalizedReason;
+        rejectedAt = Objects.requireNonNull(now);
+        status = AuctionStatus.REJECTED;
     }
 
     public AuctionFinancialQuote createQuote(FinancialCalculation calculation, Instant now, Duration validity) {
@@ -379,7 +408,8 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         if (status == AuctionStatus.CANCELLED && normalizedReason.equals(cancellationReason)) {
             return;
         }
-        if (status == AuctionStatus.CLOSED || status == AuctionStatus.CANCELLED || status == AuctionStatus.EXPIRED) {
+        if (status == AuctionStatus.CLOSED || status == AuctionStatus.CANCELLED || status == AuctionStatus.EXPIRED
+                || status == AuctionStatus.REJECTED) {
             throw new IllegalStateException("Auction is already in a terminal state");
         }
         if (status == AuctionStatus.FULLY_FUNDED) {
