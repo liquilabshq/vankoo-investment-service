@@ -10,11 +10,13 @@ import com.liquilabs.vankoo.investment.domain.model.commands.CloseAuctionCommand
 import com.liquilabs.vankoo.investment.domain.model.commands.CreateAuctionCommand;
 import com.liquilabs.vankoo.investment.domain.model.commands.CreateFinancialQuoteCommand;
 import com.liquilabs.vankoo.investment.domain.model.commands.EvaluateAuctionCommand;
+import com.liquilabs.vankoo.investment.domain.model.commands.RejectAuctionCommand;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
 
 public interface AuctionCommandService {
     AuctionId handle(CreateAuctionCommand command);
     Auction handle(EvaluateAuctionCommand command);
+    Auction handle(RejectAuctionCommand command);
     AuctionFinancialQuote handle(CreateFinancialQuoteCommand command);
     Auction handle(AcceptFinancialQuoteCommand command);
     Partition handle(AddPartitionCommand command);

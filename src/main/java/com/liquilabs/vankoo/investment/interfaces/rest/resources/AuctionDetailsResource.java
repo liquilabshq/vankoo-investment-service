@@ -31,6 +31,9 @@ public record AuctionDetailsResource(
         Instant closedAt,
         Instant cancelledAt,
         String cancellationReason,
+        Instant rejectedAt,
+        String rejectionReasonCode,
+        String rejectionReason,
         FinancialQuoteResource acceptedQuote
 ) {
     public static AuctionDetailsResource from(Auction auction) {
@@ -60,6 +63,9 @@ public record AuctionDetailsResource(
                 auction.getClosedAt(),
                 auction.getCancelledAt(),
                 auction.getCancellationReason(),
+                auction.getRejectedAt(),
+                auction.getRejectionReasonCode(),
+                auction.getRejectionReason(),
                 quote
         );
     }

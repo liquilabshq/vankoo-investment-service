@@ -8,5 +8,6 @@ public enum AuctionStatus {
     FULLY_FUNDED,
     CLOSED,
     EXPIRED,
-    CANCELLED
+    CANCELLED,
+    REJECTED
 }
