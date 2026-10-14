@@ -3,12 +3,14 @@ package com.liquilabs.vankoo.investment.interfaces.rest.controllers;
 import com.liquilabs.vankoo.investment.domain.model.commands.CancelAuctionCommand;
 import com.liquilabs.vankoo.investment.domain.model.commands.CloseAuctionCommand;
 import com.liquilabs.vankoo.investment.domain.model.commands.EvaluateAuctionCommand;
+import com.liquilabs.vankoo.investment.domain.model.commands.RejectAuctionCommand;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionId;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
 import com.liquilabs.vankoo.investment.interfaces.rest.resources.AuctionDetailsResource;
 import com.liquilabs.vankoo.investment.interfaces.rest.resources.CancelAuctionResource;
 import com.liquilabs.vankoo.investment.interfaces.rest.resources.CloseAuctionResource;
 import com.liquilabs.vankoo.investment.interfaces.rest.resources.EvaluateAuctionResource;
+import com.liquilabs.vankoo.investment.interfaces.rest.resources.RejectAuctionResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -36,6 +38,22 @@ public class InternalAuctionsController {
                 resource.assessmentId(),
                 resource.riskGrade(),
                 resource.fullBalanceOutstanding(),
+                resource.assessedAt()
+        ));
+        return AuctionDetailsResource.from(auction);
+    }
+
+    @PostMapping("/{auctionId}/rejection")
+    @Operation(summary = "Reject an auction awaiting its risk assessment because the invoice is not eligible")
+    public AuctionDetailsResource reject(
+            @PathVariable String auctionId,
+            @Valid @RequestBody RejectAuctionResource resource
+    ) {
+        var auction = auctionCommandService.handle(new RejectAuctionCommand(
+                new AuctionId(auctionId),
+                resource.assessmentId(),
+                resource.reasonCode(),
+                resource.reason(),
                 resource.assessedAt()
         ));
         return AuctionDetailsResource.from(auction);

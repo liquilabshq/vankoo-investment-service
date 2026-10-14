@@ -83,6 +83,20 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
 
     @Override
     @Transactional
+    public Auction handle(RejectAuctionCommand command) {
+        Auction auction = locked(command.auctionId());
+        auction.reject(
+                command.assessmentId(),
+                command.reasonCode(),
+                command.reason(),
+                command.assessedAt(),
+                clock.instant()
+        );
+        return auctionRepository.save(auction);
+    }
+
+    @Override
+    @Transactional
     public AuctionFinancialQuote handle(CreateFinancialQuoteCommand command) {
         Auction auction = locked(command.auctionId());
         auction.ensureOwnedBy(command.requesterId());
