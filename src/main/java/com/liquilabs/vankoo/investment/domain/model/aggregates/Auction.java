@@ -106,6 +106,26 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
     @Column(nullable = false)
     private boolean greenCertified;
 
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "certificationId", column = @Column(name = "green_certification_id", length = 100)),
+            @AttributeOverride(name = "standard", column = @Column(name = "green_standard", length = 20)),
+            @AttributeOverride(name = "issuer", column = @Column(name = "green_issuer", length = 200)),
+            @AttributeOverride(name = "validUntil", column = @Column(name = "green_valid_until"))
+    })
+    private GreenCertification greenCertification;
+
+    // Eager on purpose: open-in-view is off and the detail is built after the transaction,
+    // and an auction has at most a handful of criteria.
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "auction_green_criteria", joinColumns = @JoinColumn(name = "auction_id"))
+    @AttributeOverrides({
+            @AttributeOverride(name = "code", column = @Column(name = "criterion_code", nullable = false, length = 40)),
+            @AttributeOverride(name = "detail", column = @Column(name = "detail", length = 300))
+    })
+    @OrderBy("code ASC")
+    private Set<GreenCriterion> greenCriteria = new LinkedHashSet<>();
+
     @Column(nullable = false)
     private boolean fullBalanceOutstandingConfirmed;
 
@@ -197,6 +217,20 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
     }
 
     public void evaluate(String newAssessmentId, ScoreGrade grade, boolean fullBalanceOutstanding, Instant assessmentTime) {
+        evaluate(newAssessmentId, grade, fullBalanceOutstanding, assessmentTime, null);
+    }
+
+    /**
+     * Applies the risk assessment. A green evidence makes the auction green; without one it is not,
+     * even if an earlier assessment said it was.
+     */
+    public void evaluate(
+            String newAssessmentId,
+            ScoreGrade grade,
+            boolean fullBalanceOutstanding,
+            Instant assessmentTime,
+            GreenEvidence green
+    ) {
         if (status != AuctionStatus.PENDING_VERIFICATION_RISK && status != AuctionStatus.DRAFT) {
             throw new IllegalStateException("Auction can no longer be evaluated");
         }
@@ -209,7 +243,7 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
 
         String normalizedAssessmentId = requireText(newAssessmentId, "Assessment ID");
         if (normalizedAssessmentId.equals(assessmentId)) {
-            if (riskScore.grade() != grade || !fullBalanceOutstandingConfirmed) {
+            if (riskScore.grade() != grade || !fullBalanceOutstandingConfirmed || !Objects.equals(greenEvidence(), green)) {
                 throw new IllegalStateException("Assessment ID was already used with different data");
             }
             return;
@@ -221,7 +255,28 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         fullBalanceOutstandingConfirmed = true;
         assessmentId = normalizedAssessmentId;
         assessedAt = Objects.requireNonNull(assessmentTime);
+        applyGreen(green);
         status = AuctionStatus.DRAFT;
+    }
+
+    /** The certificate and criteria that make this auction green, or {@code null} if it is not. */
+    public GreenEvidence greenEvidence() {
+        if (greenCertification == null) {
+            return null;
+        }
+        return new GreenEvidence(greenCertification, List.copyOf(greenCriteria));
+    }
+
+    private void applyGreen(GreenEvidence green) {
+        greenCriteria.clear();
+        if (green == null) {
+            greenCertified = false;
+            greenCertification = null;
+            return;
+        }
+        greenCertified = true;
+        greenCertification = green.certification();
+        greenCriteria.addAll(green.criteria());
     }
 
     public void reject(String newAssessmentId, String reasonCode, String reason, Instant assessmentTime, Instant now) {

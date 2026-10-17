@@ -76,7 +76,8 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
                 command.assessmentId(),
                 command.riskGrade(),
                 command.fullBalanceOutstanding(),
-                command.assessedAt()
+                command.assessedAt(),
+                command.green()
         );
         return auctionRepository.save(auction);
     }
