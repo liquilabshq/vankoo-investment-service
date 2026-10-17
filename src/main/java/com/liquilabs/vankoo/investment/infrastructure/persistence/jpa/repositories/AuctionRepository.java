@@ -20,7 +20,7 @@ public interface AuctionRepository extends JpaRepository<Auction, AuctionId> {
 
     Optional<Auction> findByInvoiceId(InvoiceId invoiceId);
 
-    @EntityGraph(attributePaths = {"quotes", "partitions"})
+    @EntityGraph(attributePaths = {"quotes", "partitions", "greenCriteria"})
     @Query("select a from Auction a where a.id = :id")
     Optional<Auction> findDetailedById(@Param("id") AuctionId id);
 
@@ -46,10 +46,10 @@ public interface AuctionRepository extends JpaRepository<Auction, AuctionId> {
     @Query("select a from Auction a where a.id = :id")
     Optional<Auction> findByIdForUpdate(@Param("id") AuctionId id);
 
-    @EntityGraph(attributePaths = {"quotes", "partitions"})
+    @EntityGraph(attributePaths = {"quotes", "partitions", "greenCriteria"})
     List<Auction> findByMypeId(UserId mypeId);
 
-    @EntityGraph(attributePaths = {"quotes", "partitions"})
+    @EntityGraph(attributePaths = {"quotes", "partitions", "greenCriteria"})
     @Query("select distinct a from Auction a join a.partitions p where p.investorId = :investorId")
     List<Auction> findByInvestorParticipation(@Param("investorId") UserId investorId);
 }

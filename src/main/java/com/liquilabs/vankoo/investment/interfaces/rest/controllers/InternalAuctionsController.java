@@ -38,7 +38,8 @@ public class InternalAuctionsController {
                 resource.assessmentId(),
                 resource.riskGrade(),
                 resource.fullBalanceOutstanding(),
-                resource.assessedAt()
+                resource.assessedAt(),
+                resource.greenCertification() == null ? null : resource.greenCertification().toValueObject()
         ));
         return AuctionDetailsResource.from(auction);
     }
