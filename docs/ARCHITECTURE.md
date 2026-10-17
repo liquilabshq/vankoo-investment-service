@@ -82,5 +82,14 @@ Cada subasta nueva la califica `vankoo-risk-service`: consume `AuctionCreated` y
 elegible, a `POST /api/v1/internal/auctions/{id}/rejection` (pasa a `REJECTED` con el código y el
 motivo). Las rutas `/internal` no pasan por el gateway.
 
+La evaluación puede traer `greenCertification`: el certificado ambiental de la MYPE (ISO 14001 o
+ISO 50001) que risk validó, con su emisor, su vigencia y los criterios que cumplió. Si viene, la
+subasta queda verde (`greenCertified = true`) y guarda el certificado en `auctions` y los criterios
+en `auction_green_criteria` (V5), como pide US10. Si no viene, la subasta no es verde aunque se
+creara con `greenCertified = true`: el verde solo lo da una certificación validada. Las reglas que
+deciden el verde son de risk (`docs/GREEN_RULES.md` de `vankoo-risk-service`); Investment solo las
+guarda y las muestra en el detalle (`GET /api/v1/auctions/{id}`). El marketplace filtra por
+`greenCertified` (US11), que le llega en `AuctionPublished`.
+
 La entrega at-least-once de sus eventos de integración mediante Oracle y Kafka se describe en
 [`AUCTION_OUTBOX.md`](AUCTION_OUTBOX.md).
