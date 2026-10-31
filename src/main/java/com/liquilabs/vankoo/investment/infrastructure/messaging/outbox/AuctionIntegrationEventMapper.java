@@ -3,17 +3,21 @@ package com.liquilabs.vankoo.investment.infrastructure.messaging.outbox;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCancelledEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionClosedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCreatedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionEvaluatedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionExpiredEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionFullyFundedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionPublishedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionRejectedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.PartitionAddedEvent;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionCancelledIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionClosedIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionCreatedIntegrationEventData;
+import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionEvaluatedIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionExpiredIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionFullyFundedIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionLifecycleEventContract;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionPublishedIntegrationEventData;
+import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionRejectedIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.PartitionAddedIntegrationEventData;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +31,24 @@ public class AuctionIntegrationEventMapper {
                     new AuctionCreatedIntegrationEventData(
                             value.invoiceId(), value.mypeId(), value.payerRuc(), value.payerName(), value.dueDate(),
                             value.invoiceAmount(), value.currency(), value.status().name(), value.greenCertified()
+                    )
+            );
+        }
+        if (event instanceof AuctionEvaluatedEvent value) {
+            return new MappedAuctionIntegrationEvent(
+                    value.auctionId(), AuctionLifecycleEventContract.AUCTION_EVALUATED, value.occurredAt(),
+                    new AuctionEvaluatedIntegrationEventData(
+                            value.invoiceId(), value.mypeId(), value.assessmentId(), value.riskGrade().name(),
+                            value.greenCertified(), value.status().name()
+                    )
+            );
+        }
+        if (event instanceof AuctionRejectedEvent value) {
+            return new MappedAuctionIntegrationEvent(
+                    value.auctionId(), AuctionLifecycleEventContract.AUCTION_REJECTED, value.occurredAt(),
+                    new AuctionRejectedIntegrationEventData(
+                            value.invoiceId(), value.mypeId(), value.assessmentId(), value.reasonCode(),
+                            value.reason(), value.status().name()
                     )
             );
         }

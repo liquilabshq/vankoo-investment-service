@@ -7,6 +7,8 @@ public final class AuctionLifecycleEventContract {
     public static final int SCHEMA_VERSION = 1;
 
     public static final String AUCTION_CREATED = "AuctionCreated";
+    public static final String AUCTION_EVALUATED = "AuctionEvaluated";
+    public static final String AUCTION_REJECTED = "AuctionRejected";
     public static final String AUCTION_PUBLISHED = "AuctionPublished";
     public static final String PARTITION_ADDED = "PartitionAdded";
     public static final String AUCTION_FULLY_FUNDED = "AuctionFullyFunded";

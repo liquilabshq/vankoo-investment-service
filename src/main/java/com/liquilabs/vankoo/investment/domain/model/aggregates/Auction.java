@@ -6,9 +6,11 @@ import com.liquilabs.vankoo.investment.domain.model.entities.Partition;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCreatedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCancelledEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionClosedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionEvaluatedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionExpiredEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionFullyFundedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionPublishedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionRejectedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.PartitionAddedEvent;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.FinancialCalculation;
@@ -257,6 +259,10 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         assessedAt = Objects.requireNonNull(assessmentTime);
         applyGreen(green);
         status = AuctionStatus.DRAFT;
+        registerEvent(new AuctionEvaluatedEvent(
+                id.uuid(), invoiceId.uuid(), mypeId.uuid(), assessmentId, riskScore.grade(),
+                greenCertified, status, assessedAt
+        ));
     }
 
     /** The certificate and criteria that make this auction green, or {@code null} if it is not. */
@@ -299,6 +305,10 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         rejectionReason = normalizedReason;
         rejectedAt = Objects.requireNonNull(now);
         status = AuctionStatus.REJECTED;
+        registerEvent(new AuctionRejectedEvent(
+                id.uuid(), invoiceId.uuid(), mypeId.uuid(), assessmentId, rejectionReasonCode,
+                rejectionReason, status, rejectedAt
+        ));
     }
 
     public AuctionFinancialQuote createQuote(FinancialCalculation calculation, Instant now, Duration validity) {

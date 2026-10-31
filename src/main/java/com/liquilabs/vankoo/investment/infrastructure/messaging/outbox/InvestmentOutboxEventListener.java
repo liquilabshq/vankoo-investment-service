@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCancelledEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionClosedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCreatedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionEvaluatedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionExpiredEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionFullyFundedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionPublishedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionRejectedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.PartitionAddedEvent;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionLifecycleEventContract;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionLifecycleIntegrationEvent;
@@ -42,6 +44,12 @@ public class InvestmentOutboxEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void on(AuctionCreatedEvent event) { capture(event); }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void on(AuctionEvaluatedEvent event) { capture(event); }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void on(AuctionRejectedEvent event) { capture(event); }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void on(AuctionPublishedEvent event) { capture(event); }
