@@ -56,8 +56,10 @@ Kafka key so all lifecycle events for one auction remain in a single partition a
 order. The consumer group is `investment-marketplace-v1`; invalid messages are routed after three
 attempts to `investment.auction-lifecycle.v1.dlq`.
 
-The stream contains `AuctionCreated`, `AuctionPublished`, `PartitionAdded`,
-`AuctionFullyFunded`, `AuctionExpired`, `AuctionCancelled` and `AuctionClosed`. Contracts use an
+The stream contains `AuctionCreated`, `AuctionEvaluated`, `AuctionRejected`, `AuctionPublished`,
+`PartitionAdded`, `AuctionFullyFunded`, `AuctionExpired`, `AuctionCancelled` and `AuctionClosed`.
+The projection records `AuctionEvaluated` and `AuctionRejected` as applied without changing the
+view: the risk outcome is for the MYPE, and only published auctions reach the Marketplace. Contracts use an
 envelope with `eventId`, `eventType`, `schemaVersion`, `aggregateId`, `sequence`, `occurredAt` and a
 type-specific `data` payload. Delivery is at-least-once, so consumers deduplicate by `eventId` and
 must not regress an aggregate to an older `sequence`.

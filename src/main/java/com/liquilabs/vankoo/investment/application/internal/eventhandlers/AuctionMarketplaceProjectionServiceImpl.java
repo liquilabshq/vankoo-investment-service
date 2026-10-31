@@ -80,6 +80,8 @@ public class AuctionMarketplaceProjectionServiceImpl implements AuctionMarketpla
                 applyCreated(command, view);
                 yield true;
             }
+            // The risk outcome is for the MYPE: the marketplace only shows published auctions.
+            case AuctionEvaluated, AuctionRejected -> true;
             case AuctionPublished -> {
                 applyPublished(command, view);
                 yield true;

@@ -22,7 +22,7 @@ Every message has the same required fields:
 | Field | Format | Meaning |
 | --- | --- | --- |
 | `eventId` | UUID string | Stable identity of the fact; it remains unchanged on every retry. |
-| `eventType` | String enum | One of the seven event names documented below. |
+| `eventType` | String enum | One of the nine event names documented below. |
 | `schemaVersion` | Integer constant `1` | Version of this wire contract. |
 | `aggregateId` | Non-empty string | Auction identifier and Kafka record key. |
 | `sequence` | Positive integer | Monotonic publication sequence; it is compared only with events for the same auction. |
@@ -38,12 +38,17 @@ and risk grades are strings in the wire contract and are not Java domain enums.
 | `eventType` | Required `data` fields | Meaning |
 | --- | --- | --- |
 | `AuctionCreated` | `invoiceId`, `mypeId`, `payerRuc`, `payerName`, `dueDate`, `invoiceAmount`, `currency`, `status`, `greenCertified` | Creates a preliminary, non-public projection row. `status` is `PENDING_VERIFICATION_RISK`. |
+| `AuctionEvaluated` | `invoiceId`, `mypeId`, `assessmentId`, `riskGrade`, `greenCertified`, `status` | The risk service graded the auction and the MYPE can now see its quote. `status` is `DRAFT`. A new assessment of a `DRAFT` auction emits it again; repeating the same `assessmentId` does not. Not projected into the Marketplace. |
+| `AuctionRejected` | `invoiceId`, `mypeId`, `assessmentId`, `reasonCode`, `reason`, `status` | The risk service refused to fund the invoice. Terminal; `status` is `REJECTED`. `reason` is the text shown to the MYPE. Not projected into the Marketplace. |
 | `AuctionPublished` | Invoice/MYPE/payer fields, `dueDate`, `invoiceAmount`, `fundableAmount`, `targetAmount`, `currentFunding`, `currency`, `investorTea`, `investorTermRate`, `quotedTermDays`, `riskGrade`, `status`, `greenCertified`, `publishedAt`, `expiresAt` | Is self-contained and makes the auction visible. `status` is `PUBLISHED`. |
 | `PartitionAdded` | `partitionId`, `addedAmount`, `currentFunding` | Advances the projected funding using the aggregate-calculated total. |
 | `AuctionFullyFunded` | Empty object | Changes the lifecycle state to `FULLY_FUNDED`; the target was established by `AuctionPublished`. |
 | `AuctionExpired` | `releasedInvestmentTransactionIds` | Changes the state to `EXPIRED` and reports reservations released by the aggregate. |
 | `AuctionCancelled` | `reason`, `releasedInvestmentTransactionIds` | Changes the state to `CANCELLED` and explains the administrative cancellation. |
 | `AuctionClosed` | `closingTransactionId` | Changes the state to `CLOSED` and correlates the settlement transaction. |
+
+For `AuctionEvaluated`, `occurredAt` is the assessment time reported by the risk service; for
+`AuctionRejected`, it is when Investment recorded the rejection.
 
 `occurredAt` is also the authoritative published, expired, cancelled, fully-funded or closed time
 when an event represents that transition. Consumers must defer an incremental event when its
@@ -63,6 +68,10 @@ Version 1 is backward compatible only under these rules:
   or change the meaning of an existing value.
 - A new required field, incompatible semantic change, or removal requires schema version 2 and a
   new topic such as `investment.auction-lifecycle.v2`.
+- A new event type is additive only once every known consumer ignores or handles it, because an
+  unknown type is invalid for the consumers below. `AuctionEvaluated` and `AuctionRejected` were
+  added on that basis: the Marketplace projection acknowledges them, the risk service ignores
+  them, and Invoicing reads them to show the invoice as approved or not eligible.
 - An incompatible rollout uses a time-boxed dual-publish window. Consumers migrate and validate
   v2 before v1 publication is retired.
 - Unknown `eventType` or `schemaVersion` values are invalid for this schema and must follow the

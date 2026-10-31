@@ -22,6 +22,8 @@
       "type": "string",
       "enum": [
         "AuctionCreated",
+        "AuctionEvaluated",
+        "AuctionRejected",
         "AuctionPublished",
         "PartitionAdded",
         "AuctionFullyFunded",
@@ -61,6 +63,38 @@
         "properties": {
           "data": {
             "$ref": "#/$defs/auctionCreatedData"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "AuctionEvaluated"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/auctionEvaluatedData"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "AuctionRejected"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/auctionRejectedData"
           }
         }
       }
@@ -211,6 +245,32 @@
         "currency": { "$ref": "#/$defs/currency" },
         "status": { "const": "PENDING_VERIFICATION_RISK" },
         "greenCertified": { "type": "boolean" }
+      }
+    },
+    "auctionEvaluatedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["invoiceId", "mypeId", "assessmentId", "riskGrade", "greenCertified", "status"],
+      "properties": {
+        "invoiceId": { "$ref": "#/$defs/id" },
+        "mypeId": { "$ref": "#/$defs/id" },
+        "assessmentId": { "$ref": "#/$defs/id" },
+        "riskGrade": { "type": "string", "enum": ["A", "B", "C"] },
+        "greenCertified": { "type": "boolean" },
+        "status": { "const": "DRAFT" }
+      }
+    },
+    "auctionRejectedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["invoiceId", "mypeId", "assessmentId", "reasonCode", "reason", "status"],
+      "properties": {
+        "invoiceId": { "$ref": "#/$defs/id" },
+        "mypeId": { "$ref": "#/$defs/id" },
+        "assessmentId": { "$ref": "#/$defs/id" },
+        "reasonCode": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "status": { "const": "REJECTED" }
       }
     },
     "auctionPublishedData": {
