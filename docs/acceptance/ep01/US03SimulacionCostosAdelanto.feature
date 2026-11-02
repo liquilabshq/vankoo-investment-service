@@ -6,7 +6,9 @@ Característica: Simulación de costos y adelanto
   Para conocer el monto que recibiré antes de aceptar la operación
 
   Escenario: Consultar las condiciones de una operación válida
-    Dado que la factura tiene monto, moneda, plazo y clasificación de riesgo válidos
+    Dado que la factura tiene los siguientes datos:
+      | monto    | moneda | plazo en días | clasificación |
+      | 10000.00 | PEN    | 60            | B             |
     Cuando el empresario solicita la simulación del adelanto
     Entonces el sistema informa el monto bruto, el descuento y la comisión
     Y muestra el monto neto que recibiría el empresario
