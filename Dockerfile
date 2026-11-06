@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Usuario de seguridad para no correr como root
 RUN addgroup --system spring && adduser --system spring --ingroup spring
+COPY docker/entrypoint.sh /app/entrypoint.sh
 USER spring
 
 # Copiamos el JAR (ajustado al nombre del artifact generado por Maven en la carpeta target)
@@ -27,5 +28,6 @@ COPY --from=build /app/target/investment-*.jar app.jar
 # Exponemos el puerto que configuramos en el YAML
 EXPOSE 8082
 
-# Ejecutamos con el perfil de docker activo
-ENTRYPOINT ["java", "-Dspring.profiles.active=docker", "-jar", "app.jar"]
+# Docker sigue siendo el perfil local; Azure lo sustituye mediante el entorno.
+ENV SPRING_PROFILES_ACTIVE=docker
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]
