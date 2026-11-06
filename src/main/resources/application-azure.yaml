@@ -1,0 +1,72 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: ${INVESTMENT_DB_URL}
+    username: ${INVESTMENT_DB_USER}
+    password: ${INVESTMENT_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      data-source-properties:
+        oracle.net.ssl_server_dn_match: true
+        oracle.net.disableOob: true
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+  cloud:
+    function:
+      definition: ${INVESTMENT_FUNCTION_DEFINITION:}
+    discovery:
+      enabled: false
+    stream:
+      function:
+        autodetect: false
+      kafka:
+        binder:
+          auto-create-topics: false
+          brokers: ${INVESTMENT_KAFKA_BROKERS:localhost:9093}
+  flyway:
+    enabled: true
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+authorization:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration:
+      days: ${JWT_EXPIRATION_DAYS:7}
+
+management:
+  health:
+    binders:
+      enabled: ${INVESTMENT_MESSAGING_ENABLED:false}
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+
+documentation:
+  local-url: ${INVESTMENT_PUBLIC_URL}
+  gateway-url: ${INVESTMENT_PUBLIC_URL}
+
+vankoo:
+  investment:
+    messaging:
+      enabled: ${INVESTMENT_MESSAGING_ENABLED:false}
