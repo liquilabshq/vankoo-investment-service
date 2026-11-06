@@ -138,6 +138,19 @@
         "GET /actuator/health responde 200 con el servicio registrado en Eureka (discovery-server).",
         "docker-compose.yaml o compose.yaml no se agregan a este repo (vankoo-investment-service); la infraestructura vive únicamente en vankoo/infrastructure."
       ],
+      "status": "done"
+    },
+    {
+      "id": 11,
+      "name": "azure-deployment",
+      "title": "Preparar despliegue independiente de Investment en Azure",
+      "description": "Perfil Azure con Oracle TCPS, sondas, selección del perfil en Docker y mensajería desactivable conservando el outbox. Terraform y operación de VM viven en vankoo-infra.",
+      "acceptance": [
+        "El contenedor permite seleccionar el perfil azure mediante SPRING_PROFILES_ACTIVE.",
+        "El perfil azure usa credenciales externas, valida el esquema y limita Actuator a health e info.",
+        "Con mensajería desactivada no se conecta a Kafka y los eventos siguen persistiendo en el outbox.",
+        "mvn test pasa; las verificaciones reales de Oracle y Azure se documentan por separado."
+      ],
       "status": "in_progress"
     }
   ]
