@@ -3,6 +3,7 @@ package com.liquilabs.vankoo.investment.infrastructure.messaging.outbox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.support.KafkaHeaders;
@@ -17,6 +18,7 @@ import java.time.Clock;
 import java.time.Duration;
 
 @Component
+@ConditionalOnProperty(name = "vankoo.investment.messaging.enabled", havingValue = "true", matchIfMissing = true)
 public class OutboxPublisher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OutboxPublisher.class);
