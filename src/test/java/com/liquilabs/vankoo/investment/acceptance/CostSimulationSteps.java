@@ -5,6 +5,7 @@ import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.AuctionPricingCalculator;
 import com.liquilabs.vankoo.investment.domain.services.AuctionPricingCalculatorTest;
 import com.liquilabs.vankoo.investment.domain.services.FinancialCalculation;
+import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -12,6 +13,7 @@ import io.cucumber.java.en.When;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,12 +22,22 @@ public class CostSimulationSteps {
     private final LocalDate today = LocalDate.of(2026, 9, 25);
     private ScoreGrade grade = ScoreGrade.B;
     private BigDecimal amount = new BigDecimal("10000.00");
+    private Currency currency = Currency.PEN;
     private LocalDate dueDate = today.plusDays(60);
     private FinancialCalculation calculation;
     private RuntimeException rejection;
     private Auction auction;
 
-    @Given("^que la factura tiene (.*)$")
+    @Given("que la factura tiene los siguientes datos:")
+    public void invoiceWithData(DataTable table) {
+        Map<String, String> invoice = table.asMaps().get(0);
+        amount = new BigDecimal(invoice.get("monto"));
+        currency = Currency.valueOf(invoice.get("moneda"));
+        dueDate = today.plusDays(Long.parseLong(invoice.get("plazo en días")));
+        grade = ScoreGrade.valueOf(invoice.get("clasificación"));
+    }
+
+    @Given("^que la factura tiene (?!los siguientes datos)(.*)$")
     public void invoiceWith(String condition) {
         switch (condition) {
             case "monto, moneda, plazo y clasificación de riesgo válidos" -> { }
@@ -40,7 +52,7 @@ public class CostSimulationSteps {
     public void requestSimulation() {
         try {
             auction = new Auction(new InvoiceId("invoice-bdd"), new UserId("mype-bdd"),
-                    new Money(amount, Currency.PEN), false,
+                    new Money(amount, currency), false,
                     "20123456789", "Pagador S.A.", dueDate);
             if (grade != null) {
                 auction.evaluate("assessment-bdd", grade, true, today.atStartOfDay(ZoneOffset.UTC).toInstant());
@@ -55,7 +67,7 @@ public class CostSimulationSteps {
     @Then("el sistema informa el monto bruto, el descuento y la comisión")
     public void reportsPricingComponents() {
         assertThat(rejection).isNull();
-        assertThat(calculation.fundableAmount()).isEqualByComparingTo("10000.00");
+        assertThat(calculation.fundableAmount()).isEqualByComparingTo(amount);
         assertThat(calculation.investorGrossProfit()).isPositive();
         assertThat(calculation.platformFeeTotal()).isPositive();
     }

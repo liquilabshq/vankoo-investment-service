@@ -103,12 +103,53 @@ class InvestmentOutboxTransactionTest {
         TestTransaction.end();
         TestTransaction.start();
 
+        var events = outboxRepository.findByAggregateIdOrderBySequence(auction.getId().uuid());
+        assertThat(events).extracting(OutboxEvent::getEventType)
+                .containsExactly("AuctionEvaluated", "AuctionPublished");
+        assertThat(events.get(1).getPayload()).contains("\"targetAmount\"").contains("\"expiresAt\"");
+    }
+
+    @Test
+    void evaluatingAnAuctionPersistsTheOutcomeOnce() {
+        Auction auction = auction("invoice-outbox-evaluated");
+        auction.evaluate("assessment-evaluated", ScoreGrade.A, true, NOW);
+        auction.evaluate("assessment-evaluated", ScoreGrade.A, true, NOW);
+        auctionRepository.save(auction);
+
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+        TestTransaction.start();
+
         assertThat(outboxRepository.findByAggregateIdOrderBySequence(auction.getId().uuid()))
                 .singleElement()
                 .satisfies(event -> {
-                    assertThat(event.getEventType()).isEqualTo("AuctionPublished");
-                    assertThat(event.getPayload()).contains("\"targetAmount\"");
-                    assertThat(event.getPayload()).contains("\"expiresAt\"");
+                    assertThat(event.getEventType()).isEqualTo("AuctionEvaluated");
+                    assertThat(event.getPayload())
+                            .contains("\"invoiceId\":\"" + auction.getInvoiceId().uuid() + "\"")
+                            .contains("\"riskGrade\":\"A\"")
+                            .contains("\"status\":\"DRAFT\"");
+                });
+    }
+
+    @Test
+    void rejectingAnAuctionPersistsTheOutcomeOnce() {
+        Auction auction = auction("invoice-outbox-rejected");
+        auction.reject("assessment-rejected", "PAYER_NOT_ACTIVE", "Baja definitiva", NOW, NOW);
+        auction.reject("assessment-rejected", "PAYER_NOT_ACTIVE", "Baja definitiva", NOW, NOW.plusSeconds(60));
+        auctionRepository.save(auction);
+
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+        TestTransaction.start();
+
+        assertThat(outboxRepository.findByAggregateIdOrderBySequence(auction.getId().uuid()))
+                .singleElement()
+                .satisfies(event -> {
+                    assertThat(event.getEventType()).isEqualTo("AuctionRejected");
+                    assertThat(event.getPayload())
+                            .contains("\"invoiceId\":\"" + auction.getInvoiceId().uuid() + "\"")
+                            .contains("\"reasonCode\":\"PAYER_NOT_ACTIVE\"")
+                            .contains("\"status\":\"REJECTED\"");
                 });
     }
 

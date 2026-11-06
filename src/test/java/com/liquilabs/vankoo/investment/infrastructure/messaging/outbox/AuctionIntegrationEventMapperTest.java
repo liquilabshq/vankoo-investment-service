@@ -3,14 +3,18 @@ package com.liquilabs.vankoo.investment.infrastructure.messaging.outbox;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCancelledEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionClosedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionCreatedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionEvaluatedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionExpiredEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionFullyFundedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.AuctionPublishedEvent;
+import com.liquilabs.vankoo.investment.domain.model.events.AuctionRejectedEvent;
 import com.liquilabs.vankoo.investment.domain.model.events.PartitionAddedEvent;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.AuctionStatus;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.ScoreGrade;
+import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionEvaluatedIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionLifecycleEventContract;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionPublishedIntegrationEventData;
+import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionRejectedIntegrationEventData;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -33,6 +37,14 @@ class AuctionIntegrationEventMapperTest {
                         LocalDate.of(2026, 11, 14), new BigDecimal("10000.00"), "PEN",
                         AuctionStatus.PENDING_VERIFICATION_RISK, true, NOW
                 ),
+                new AuctionEvaluatedEvent(
+                        "auction-1", "invoice-1", "mype-1", "risk-1", ScoreGrade.B, true,
+                        AuctionStatus.DRAFT, NOW
+                ),
+                new AuctionRejectedEvent(
+                        "auction-2", "invoice-2", "mype-1", "risk-2", "PAYER_NOT_ACTIVE", "Baja definitiva",
+                        AuctionStatus.REJECTED, NOW
+                ),
                 publishedEvent(),
                 new PartitionAddedEvent(
                         "auction-1", "partition-1", new BigDecimal("500.00"),
@@ -47,6 +59,8 @@ class AuctionIntegrationEventMapperTest {
         assertThat(domainEvents.stream().map(mapper::map).map(MappedAuctionIntegrationEvent::eventType))
                 .containsExactly(
                         AuctionLifecycleEventContract.AUCTION_CREATED,
+                        AuctionLifecycleEventContract.AUCTION_EVALUATED,
+                        AuctionLifecycleEventContract.AUCTION_REJECTED,
                         AuctionLifecycleEventContract.AUCTION_PUBLISHED,
                         AuctionLifecycleEventContract.PARTITION_ADDED,
                         AuctionLifecycleEventContract.AUCTION_FULLY_FUNDED,
@@ -69,6 +83,26 @@ class AuctionIntegrationEventMapperTest {
                     assertThat(data.status()).isEqualTo("PUBLISHED");
                 }
         );
+    }
+
+    @Test
+    void mapsTheRiskOutcomeWithTheInvoiceItBelongsTo() {
+        MappedAuctionIntegrationEvent evaluated = mapper.map(new AuctionEvaluatedEvent(
+                "auction-1", "invoice-1", "mype-1", "risk-1", ScoreGrade.A, false, AuctionStatus.DRAFT, NOW
+        ));
+        MappedAuctionIntegrationEvent rejected = mapper.map(new AuctionRejectedEvent(
+                "auction-2", "invoice-2", "mype-1", "risk-2", "PAYER_NOT_ACTIVE", "Baja definitiva",
+                AuctionStatus.REJECTED, NOW
+        ));
+
+        assertThat(evaluated.aggregateId()).isEqualTo("auction-1");
+        assertThat(evaluated.occurredAt()).isEqualTo(NOW);
+        assertThat(evaluated.data()).isEqualTo(new AuctionEvaluatedIntegrationEventData(
+                "invoice-1", "mype-1", "risk-1", "A", false, "DRAFT"
+        ));
+        assertThat(rejected.data()).isEqualTo(new AuctionRejectedIntegrationEventData(
+                "invoice-2", "mype-1", "risk-2", "PAYER_NOT_ACTIVE", "Baja definitiva", "REJECTED"
+        ));
     }
 
     private static AuctionPublishedEvent publishedEvent() {

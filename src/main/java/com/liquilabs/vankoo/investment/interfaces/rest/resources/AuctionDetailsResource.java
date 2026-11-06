@@ -23,6 +23,7 @@ public record AuctionDetailsResource(
         String payerName,
         LocalDate dueDate,
         boolean greenCertified,
+        GreenCertificationResource greenCertification,
         boolean fullBalanceOutstandingConfirmed,
         String assessmentId,
         Instant assessedAt,
@@ -31,6 +32,9 @@ public record AuctionDetailsResource(
         Instant closedAt,
         Instant cancelledAt,
         String cancellationReason,
+        Instant rejectedAt,
+        String rejectionReasonCode,
+        String rejectionReason,
         FinancialQuoteResource acceptedQuote
 ) {
     public static AuctionDetailsResource from(Auction auction) {
@@ -52,6 +56,7 @@ public record AuctionDetailsResource(
                 auction.getPayerName(),
                 auction.getDueDate(),
                 auction.isGreenCertified(),
+                GreenCertificationResource.from(auction.greenEvidence()),
                 auction.isFullBalanceOutstandingConfirmed(),
                 auction.getAssessmentId(),
                 auction.getAssessedAt(),
@@ -60,6 +65,9 @@ public record AuctionDetailsResource(
                 auction.getClosedAt(),
                 auction.getCancelledAt(),
                 auction.getCancellationReason(),
+                auction.getRejectedAt(),
+                auction.getRejectionReasonCode(),
+                auction.getRejectionReason(),
                 quote
         );
     }

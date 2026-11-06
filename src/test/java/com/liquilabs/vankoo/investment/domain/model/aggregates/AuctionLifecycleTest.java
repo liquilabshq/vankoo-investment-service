@@ -206,6 +206,65 @@ class AuctionLifecycleTest {
                 .isInstanceOf(UnauthorizedAccessException.class);
     }
 
+    @Test
+    void rejectsAnAuctionAwaitingItsRiskAssessmentWithTheReasonGiven() {
+        Auction auction = newAuction();
+
+        auction.reject("risk-9", "PAYER_NOT_ACTIVE", "El pagador figura con estado BAJA DE OFICIO en SUNAT", NOW, NOW.plusSeconds(5));
+
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.REJECTED);
+        assertThat(auction.getAssessmentId()).isEqualTo("risk-9");
+        assertThat(auction.getAssessedAt()).isEqualTo(NOW);
+        assertThat(auction.getRejectionReasonCode()).isEqualTo("PAYER_NOT_ACTIVE");
+        assertThat(auction.getRejectionReason()).isEqualTo("El pagador figura con estado BAJA DE OFICIO en SUNAT");
+        assertThat(auction.getRejectedAt()).isEqualTo(NOW.plusSeconds(5));
+        assertThat(auction.getRiskScore().grade()).isEqualTo(ScoreGrade.UNDER_EVALUATION);
+        assertThat(auction.getFundableAmount()).isNull();
+    }
+
+    @Test
+    void repeatingTheSameRejectionChangesNothing() {
+        Auction auction = newAuction();
+        auction.reject("risk-9", "PAYER_NOT_ACTIVE", "Baja de oficio", NOW, NOW);
+
+        auction.reject("risk-9", "PAYER_NOT_ACTIVE", "Baja de oficio", NOW, NOW.plusSeconds(60));
+
+        assertThat(auction.getRejectedAt()).isEqualTo(NOW);
+        assertThatThrownBy(() -> auction.reject("risk-10", "PAYER_NOT_ACTIVE", "Baja de oficio", NOW, NOW))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("already rejected");
+    }
+
+    @Test
+    void onlyAnAuctionAwaitingItsRiskAssessmentCanBeRejected() {
+        Auction auction = evaluatedAuction();
+
+        assertThatThrownBy(() -> auction.reject("risk-9", "PAYER_NOT_ACTIVE", "Baja de oficio", NOW, NOW))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("awaiting its risk assessment");
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.DRAFT);
+    }
+
+    @Test
+    void aRejectedAuctionIsTerminal() {
+        Auction auction = newAuction();
+        auction.reject("risk-9", "PAYER_NOT_IN_REGISTRY", "El RUC no figura en el padrón", NOW, NOW);
+
+        assertThatThrownBy(() -> auction.evaluate("risk-10", ScoreGrade.A, true, NOW))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> auction.cancel("Duplicada", NOW, true))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("terminal");
+    }
+
+    @Test
+    void aRejectionNeedsItsCodeAndReason() {
+        Auction auction = newAuction();
+
+        assertThatThrownBy(() -> auction.reject("risk-9", " ", "Motivo", NOW, NOW))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> auction.reject("risk-9", "PAYER_NOT_ACTIVE", "", NOW, NOW))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.PENDING_VERIFICATION_RISK);
+    }
+
     private Auction evaluatedAndPublishedAuction() {
         Auction auction = evaluatedAuction();
         var calculation = calculator.calculate(

@@ -11,6 +11,8 @@ import com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.views.Mark
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionCancelledIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionClosedIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionCreatedIntegrationEventData;
+import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionEvaluatedIntegrationEventData;
+import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionRejectedIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionExpiredIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionFullyFundedIntegrationEventData;
 import com.liquilabs.vankoo.investment.interfaces.events.resources.AuctionLifecycleEventContract;
@@ -101,6 +103,30 @@ class AuctionMarketplaceProjectionServiceImplTest {
         assertThat(completed.getCurrentFunding()).isEqualByComparingTo("9500.00");
         assertThat(completed.isMarketplaceVisible()).isFalse();
         assertThat(processedEventRepository.count()).isEqualTo(4);
+    }
+
+    @Test
+    void acknowledgesTheRiskOutcomeWithoutShowingItInTheMarketplace() {
+        project(event(1, AuctionLifecycleEventContract.AUCTION_CREATED, createdData()));
+        project(event(2, AuctionLifecycleEventContract.AUCTION_EVALUATED,
+                new AuctionEvaluatedIntegrationEventData("invoice-1", "mype-1", "risk-1", "B", true, "DRAFT")));
+        project(event(3, AuctionLifecycleEventContract.AUCTION_PUBLISHED, publishedData()));
+
+        assertThat(view().getStatus()).isEqualTo(AuctionStatus.PUBLISHED);
+        assertThat(processedEventRepository.findAll())
+                .extracting(event -> event.getStatus())
+                .containsOnly(MarketplaceProcessedEventStatus.APPLIED);
+
+        resetProjection();
+        project(event(1, AuctionLifecycleEventContract.AUCTION_CREATED, createdData()));
+        project(event(2, AuctionLifecycleEventContract.AUCTION_REJECTED,
+                new AuctionRejectedIntegrationEventData(
+                        "invoice-1", "mype-1", "risk-1", "PAYER_NOT_ACTIVE", "Baja definitiva", "REJECTED")));
+
+        assertThat(view().isMarketplaceVisible()).isFalse();
+        assertThat(processedEventRepository.findAll())
+                .extracting(event -> event.getStatus())
+                .containsOnly(MarketplaceProcessedEventStatus.APPLIED);
     }
 
     @Test
