@@ -444,7 +444,7 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
         status = AuctionStatus.FUNDING;
 
         registerEvent(new PartitionAddedEvent(
-                id.uuid(), partition.getId().uuid(), amount.amount(), currentFunding.amount(), now
+                id.uuid(), partition.getId().uuid(), investorId.uuid(), amount.amount(), currentFunding.amount(), now
         ));
 
         if (isFunded()) {

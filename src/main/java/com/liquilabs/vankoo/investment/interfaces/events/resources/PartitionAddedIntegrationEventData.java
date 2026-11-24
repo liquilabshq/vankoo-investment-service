@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public record PartitionAddedIntegrationEventData(
         String partitionId,
+        String investorId,
         BigDecimal addedAmount,
         BigDecimal currentFunding
 ) implements AuctionLifecycleEventData {

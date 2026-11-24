@@ -42,8 +42,7 @@ class AuctionLifecycleIntegrationEventSerializationTest {
                 event("10000000-0000-4000-8000-000000000002", AuctionLifecycleEventContract.AUCTION_PUBLISHED, 2,
                         publishedData()),
                 event("10000000-0000-4000-8000-000000000003", AuctionLifecycleEventContract.PARTITION_ADDED, 3,
-                        new PartitionAddedIntegrationEventData(
-                                "partition-1", new BigDecimal("4000.00"), new BigDecimal("4000.00")
+                        new PartitionAddedIntegrationEventData("partition-1", "investor-1", new BigDecimal("4000.00"), new BigDecimal("4000.00")
                         )),
                 event("10000000-0000-4000-8000-000000000004", AuctionLifecycleEventContract.AUCTION_FULLY_FUNDED, 4,
                         new AuctionFullyFundedIntegrationEventData()),

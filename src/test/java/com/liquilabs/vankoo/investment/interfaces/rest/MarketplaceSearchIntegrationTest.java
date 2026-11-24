@@ -217,8 +217,7 @@ class MarketplaceSearchIntegrationTest {
                 AUCTION_A,
                 2,
                 NOW.plusSeconds(2),
-                new PartitionAddedIntegrationEventData(
-                        "partition-cache", new BigDecimal("500.00"), new BigDecimal("500.00")
+                new PartitionAddedIntegrationEventData("partition-cache", "investor-1", new BigDecimal("500.00"), new BigDecimal("500.00")
                 )
         );
         projectionService.handle(eventParser.parse(objectMapper.writeValueAsBytes(event)));

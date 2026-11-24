@@ -68,7 +68,7 @@ public class AuctionIntegrationEventMapper {
             return new MappedAuctionIntegrationEvent(
                     value.auctionId(), AuctionLifecycleEventContract.PARTITION_ADDED, value.occurredAt(),
                     new PartitionAddedIntegrationEventData(
-                            value.partitionId(), value.addedAmount(), value.newCurrentFunding()
+                            value.partitionId(), value.investorId(), value.addedAmount(), value.newCurrentFunding()
                     )
             );
         }

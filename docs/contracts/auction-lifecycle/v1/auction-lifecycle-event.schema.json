@@ -323,6 +323,10 @@
       "required": ["partitionId", "addedAmount", "currentFunding"],
       "properties": {
         "partitionId": { "$ref": "#/$defs/id" },
+        "investorId": {
+          "$ref": "#/$defs/id",
+          "description": "Inversionista que compró la participación. Opcional en v1: los eventos publicados antes no lo traen."
+        },
         "addedAmount": { "$ref": "#/$defs/money" },
         "currentFunding": { "$ref": "#/$defs/money" }
       }
