@@ -95,11 +95,22 @@ public class AuctionsController {
 
     @PostMapping("/{auctionId}/investments")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Buy a fixed-rate participation in a published auction")
+    @Operation(
+            summary = "Buy a fixed-rate participation in a published auction",
+            description = "Debits the investor's wallet in Finance and grants the share, in that order. "
+                    + "X-User-Id must be the investorId. transactionId is the idempotency key of both: "
+                    + "repeating it neither debits nor buys twice. 409 with code insufficient-balance when "
+                    + "the wallet does not cover the amount; 503 with code wallet-unavailable when Finance "
+                    + "cannot be reached (retry with the same transactionId).")
     public InvestmentResponseResource invest(
             @PathVariable String auctionId,
+            @RequestHeader(value = "X-User-Id", required = false) String callerId,
             @Valid @RequestBody CreateInvestmentResource resource
     ) {
+        // Investing now moves the investor's money, so only the investor may do it.
+        if (!requester(callerId).equals(new UserId(resource.investorId()))) {
+            throw new UnauthorizedAccessException("Caller cannot invest on behalf of another investor");
+        }
         var command = CreatePartitionCommandFromResourceAssembler.toCommandFromResource(
                 new AuctionId(auctionId), resource
         );

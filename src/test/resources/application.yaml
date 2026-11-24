@@ -57,6 +57,10 @@ vankoo:
         USD: 15.00
     lifecycle:
       expiration-check-delay: PT1H
+    finance:
+      # Nadie escucha aqui: las pruebas que invierten sustituyen InvestorWalletService.
+      base-url: http://localhost:1
+      timeout: PT1S
 
 logging:
   level:
