@@ -9,6 +9,7 @@
     "partitionId": "50000000-0000-4000-8000-000000000001",
     "investorId": "019a2f6e-1c7d-7b3a-9f41-2d8e5c6a7b90",
     "addedAmount": 4000.00,
+    "currency": "PEN",
     "currentFunding": 4000.00
   }
 }

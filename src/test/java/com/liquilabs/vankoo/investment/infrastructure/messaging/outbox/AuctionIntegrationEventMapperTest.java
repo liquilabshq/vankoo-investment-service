@@ -47,7 +47,7 @@ class AuctionIntegrationEventMapperTest {
                 ),
                 publishedEvent(),
                 new PartitionAddedEvent(
-                        "auction-1", "partition-1", "investor-1", new BigDecimal("500.00"),
+                        "auction-1", "partition-1", "investor-1", new BigDecimal("500.00"), "PEN",
                         new BigDecimal("500.00"), NOW
                 ),
                 new AuctionFullyFundedEvent("auction-1", NOW),

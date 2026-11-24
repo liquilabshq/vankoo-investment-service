@@ -87,7 +87,7 @@ class AuctionMarketplaceProjectionServiceImplTest {
 
         project(event(2, AuctionLifecycleEventContract.AUCTION_PUBLISHED, publishedData()));
         project(event(3, AuctionLifecycleEventContract.PARTITION_ADDED,
-                new PartitionAddedIntegrationEventData("partition-1", "investor-1", new BigDecimal("4000.00"),
+                new PartitionAddedIntegrationEventData("partition-1", "investor-1", new BigDecimal("4000.00"), "PEN",
                         new BigDecimal("4000.00"))));
 
         AuctionMarketplaceViewEntity funding = view();
@@ -144,7 +144,7 @@ class AuctionMarketplaceProjectionServiceImplTest {
     @Test
     void defersIncrementalEventUntilPublishedArrives() {
         String partition = event(3, AuctionLifecycleEventContract.PARTITION_ADDED,
-                new PartitionAddedIntegrationEventData("partition-1", "investor-1", new BigDecimal("2500.00"),
+                new PartitionAddedIntegrationEventData("partition-1", "investor-1", new BigDecimal("2500.00"), "PEN",
                         new BigDecimal("2500.00")));
         var partitionCommand = parser.parse(partition);
 
@@ -208,7 +208,7 @@ class AuctionMarketplaceProjectionServiceImplTest {
                 event(1, AuctionLifecycleEventContract.AUCTION_CREATED, createdData()),
                 event(2, AuctionLifecycleEventContract.AUCTION_PUBLISHED, publishedData()),
                 event(3, AuctionLifecycleEventContract.PARTITION_ADDED,
-                        new PartitionAddedIntegrationEventData("partition-1", "investor-1", new BigDecimal("3200.00"),
+                        new PartitionAddedIntegrationEventData("partition-1", "investor-1", new BigDecimal("3200.00"), "PEN",
                                 new BigDecimal("3200.00")))
         );
         lifecycle.forEach(this::project);

@@ -6,6 +6,7 @@ public record PartitionAddedIntegrationEventData(
         String partitionId,
         String investorId,
         BigDecimal addedAmount,
+        String currency,
         BigDecimal currentFunding
 ) implements AuctionLifecycleEventData {
 }
