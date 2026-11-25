@@ -46,7 +46,8 @@ class AuctionLifecycleIntegrationEventSerializationTest {
                                 "partition-1", new BigDecimal("4000.00"), new BigDecimal("4000.00")
                         )),
                 event("10000000-0000-4000-8000-000000000004", AuctionLifecycleEventContract.AUCTION_FULLY_FUNDED, 4,
-                        new AuctionFullyFundedIntegrationEventData()),
+                        new AuctionFullyFundedIntegrationEventData(
+                                "invoice-1", "mype-1", "PEN", new BigDecimal("9884.00"), new BigDecimal("9848.60"))),
                 event("10000000-0000-4000-8000-000000000005", AuctionLifecycleEventContract.AUCTION_EXPIRED, 5,
                         new AuctionExpiredIntegrationEventData(List.of("investment-tx-1"))),
                 event("10000000-0000-4000-8000-000000000006", AuctionLifecycleEventContract.AUCTION_CANCELLED, 6,

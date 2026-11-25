@@ -1,5 +1,6 @@
 package com.liquilabs.vankoo.investment.application.internal.commandservices;
 
+import com.liquilabs.vankoo.investment.application.internal.outboundservices.acl.InvestorWalletService;
 import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
 import com.liquilabs.vankoo.investment.domain.model.aggregates.Auction;
 import com.liquilabs.vankoo.investment.domain.model.commands.*;
@@ -31,17 +32,20 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
     private final AuctionPricingCalculator pricingCalculator;
     private final PricingProperties pricingProperties;
     private final Clock clock;
+    private final InvestorWalletService investorWallet;
 
     public AuctionCommandServiceImpl(
             AuctionRepository auctionRepository,
             AuctionPricingCalculator pricingCalculator,
             PricingProperties pricingProperties,
-            Clock clock
+            Clock clock,
+            InvestorWalletService investorWallet
     ) {
         this.auctionRepository = auctionRepository;
         this.pricingCalculator = pricingCalculator;
         this.pricingProperties = pricingProperties;
         this.clock = clock;
+        this.investorWallet = investorWallet;
     }
 
     @Override
@@ -147,12 +151,25 @@ public class AuctionCommandServiceImpl implements AuctionCommandService {
     @Transactional
     public Partition handle(AddPartitionCommand command) {
         Auction auction = locked(command.auctionId());
+        var minimum = pricingProperties.minimumFor(command.amount().currency());
+        var now = clock.instant();
+
+        // Pay first, under the auction's row lock: nobody else can take the remaining
+        // amount between the check and the share. A replay of a share already bought
+        // is not paid again; addInvestment answers it (or refuses it if the data differ).
+        String transactionId = command.transactionId() == null ? null : command.transactionId().trim();
+        if (transactionId != null && !transactionId.isEmpty()
+                && auction.partitionByTransactionId(transactionId).isEmpty()) {
+            auction.ensureAcceptsInvestment(command.amount(), minimum, now);
+            investorWallet.debitForInvestment(command.investorId(), command.amount(), transactionId);
+        }
+
         Partition partition = auction.addInvestment(
                 command.investorId(),
                 command.amount(),
-                pricingProperties.minimumFor(command.amount().currency()),
+                minimum,
                 command.transactionId(),
-                clock.instant()
+                now
         );
         auctionRepository.save(auction);
         return partition;

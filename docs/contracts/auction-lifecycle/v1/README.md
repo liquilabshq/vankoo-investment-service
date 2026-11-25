@@ -42,7 +42,7 @@ and risk grades are strings in the wire contract and are not Java domain enums.
 | `AuctionRejected` | `invoiceId`, `mypeId`, `assessmentId`, `reasonCode`, `reason`, `status` | The risk service refused to fund the invoice. Terminal; `status` is `REJECTED`. `reason` is the text shown to the MYPE. Not projected into the Marketplace. |
 | `AuctionPublished` | Invoice/MYPE/payer fields, `dueDate`, `invoiceAmount`, `fundableAmount`, `targetAmount`, `currentFunding`, `currency`, `investorTea`, `investorTermRate`, `quotedTermDays`, `riskGrade`, `status`, `greenCertified`, `publishedAt`, `expiresAt` | Is self-contained and makes the auction visible. `status` is `PUBLISHED`. |
 | `PartitionAdded` | `partitionId`, `addedAmount`, `currentFunding` | Advances the projected funding using the aggregate-calculated total. |
-| `AuctionFullyFunded` | Empty object | Changes the lifecycle state to `FULLY_FUNDED`; the target was established by `AuctionPublished`. |
+| `AuctionFullyFunded` | None. Optional: `invoiceId`, `mypeId`, `currency`, `fundedAmount`, `mypeAdvance` | Changes the lifecycle state to `FULLY_FUNDED`; the target was established by `AuctionPublished`. `fundedAmount` is what investors put in (the target) and `mypeAdvance` what the MYPE is paid (the accepted quote's advance: target minus the platform fee and its tax). Finance credits `mypeAdvance` to the wallet of `mypeId`. Records published before these fields existed have an empty `data`. |
 | `AuctionExpired` | `releasedInvestmentTransactionIds` | Changes the state to `EXPIRED` and reports reservations released by the aggregate. |
 | `AuctionCancelled` | `reason`, `releasedInvestmentTransactionIds` | Changes the state to `CANCELLED` and explains the administrative cancellation. |
 | `AuctionClosed` | `closingTransactionId` | Changes the state to `CLOSED` and correlates the settlement transaction. |
@@ -72,6 +72,9 @@ Version 1 is backward compatible only under these rules:
   unknown type is invalid for the consumers below. `AuctionEvaluated` and `AuctionRejected` were
   added on that basis: the Marketplace projection acknowledges them, the risk service ignores
   them, and Invoicing reads them to show the invoice as approved or not eligible.
+- The optional `AuctionFullyFunded` fields were added under the first rule: the Marketplace
+  projection, the risk service, Invoicing and Notification ignore `data` for that type, and
+  Finance is the one consumer that reads it.
 - An incompatible rollout uses a time-boxed dual-publish window. Consumers migrate and validate
   v2 before v1 publication is retired.
 - Unknown `eventType` or `schemaVersion` values are invalid for this schema and must follow the

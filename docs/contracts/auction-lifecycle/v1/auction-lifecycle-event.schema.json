@@ -329,7 +329,17 @@
     },
     "auctionFullyFundedData": {
       "type": "object",
-      "maxProperties": 0
+      "additionalProperties": false,
+      "properties": {
+        "invoiceId": { "$ref": "#/$defs/id" },
+        "mypeId": { "$ref": "#/$defs/id" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "fundedAmount": { "$ref": "#/$defs/money" },
+        "mypeAdvance": { "$ref": "#/$defs/money" }
+      },
+      "dependentRequired": {
+        "mypeAdvance": ["mypeId", "currency"]
+      }
     },
     "auctionExpiredData": {
       "type": "object",

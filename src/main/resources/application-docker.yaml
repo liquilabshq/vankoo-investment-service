@@ -51,3 +51,9 @@ documentation:
   # por eso apuntan a los puertos publicados en el host.
   local-url: http://${INVESTMENT_DOCUMENTATION_SERVER_URL:localhost}:${INVESTMENT_SERVICE_PORT:8082}
   gateway-url: http://${INVESTMENT_DOCUMENTATION_GATEWAY_URL:localhost}:${API_GATEWAY_PORT:8080}/investment
+
+vankoo:
+  investment:
+    finance:
+      # Dentro del compose, Finance se ve por su nombre de servicio y su puerto interno.
+      base-url: ${FINANCE_SERVICE_URL:http://finance-service:8083}
