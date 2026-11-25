@@ -3,7 +3,9 @@ package com.liquilabs.vankoo.investment.interfaces.rest;
 import com.liquilabs.vankoo.investment.domain.model.commands.*;
 import com.liquilabs.vankoo.investment.domain.model.valueobjects.*;
 import com.liquilabs.vankoo.investment.domain.services.AuctionCommandService;
+import com.liquilabs.vankoo.investment.application.internal.outboundservices.acl.InvestorWalletService;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -30,6 +32,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({AuctionContractValidationTest.FixedClockConfiguration.class, TestChannelBinderConfiguration.class})
 @ActiveProfiles("test")
 class AuctionContractValidationTest {
+
+    /** Finance is not running here: paying is stubbed and asserted on where it matters. */
+    @MockitoBean
+    private InvestorWalletService investorWallet;
     @Autowired MockMvc mockMvc;
     @Autowired AuctionCommandService commands;
 
@@ -47,6 +53,7 @@ class AuctionContractValidationTest {
 
         var auctionId = publishedAuction("invalid-investment");
         mockMvc.perform(post("/api/v1/auctions/{auctionId}/investments", auctionId.uuid())
+                        .header("X-User-Id", "investor-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"investorId":"investor-1","amount":0,"currency":"PEN",
@@ -61,15 +68,18 @@ class AuctionContractValidationTest {
         var endpoint = "/api/v1/auctions/{auctionId}/investments";
         mockMvc.perform(post(endpoint, auctionId.uuid())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "investor-1")
                         .content(investment("investor-1", "500.00", "tx-unique")))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post(endpoint, auctionId.uuid())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "investor-2")
                         .content(investment("investor-2", "500.00", "tx-unique")))
                 .andExpect(status().isConflict());
         mockMvc.perform(post(endpoint, auctionId.uuid())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "investor-2")
                         .content(investment("investor-2", "9769.76", "tx-overfund")))
                 .andExpect(status().isBadRequest());
 
@@ -84,6 +94,7 @@ class AuctionContractValidationTest {
         var auctionId = publishedAuction("cancel-after-funding");
         mockMvc.perform(post("/api/v1/auctions/{auctionId}/investments", auctionId.uuid())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "investor-1")
                         .content(investment("investor-1", "500.00", "tx-before-cancel")))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/v1/auctions/{auctionId}/cancel", auctionId.uuid())

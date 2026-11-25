@@ -13,7 +13,9 @@ import com.liquilabs.vankoo.investment.domain.services.AuctionMarketplaceProject
 import com.liquilabs.vankoo.investment.domain.services.AuctionQueryService;
 import com.liquilabs.vankoo.investment.infrastructure.messaging.outbox.OutboxEventRepository;
 import com.liquilabs.vankoo.investment.infrastructure.messaging.projection.AuctionLifecycleEventParser;
+import com.liquilabs.vankoo.investment.application.internal.outboundservices.acl.InvestorWalletService;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -48,6 +50,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @RecordApplicationEvents
 class AuctionFinancialFlowIntegrationTest {
+
+    /** Finance is not running here: paying is stubbed and asserted on where it matters. */
+    @MockitoBean
+    private InvestorWalletService investorWallet;
 
     @Autowired
     private MockMvc mockMvc;
@@ -122,6 +128,7 @@ class AuctionFinancialFlowIntegrationTest {
                 .andExpect(jsonPath("$.acceptedQuote.quoteId").value(quoteId));
 
         String investmentJson = mockMvc.perform(post("/api/v1/auctions/{auctionId}/investments", auctionId)
+                        .header("X-User-Id", "investor-http-flow")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -284,7 +291,15 @@ class AuctionFinancialFlowIntegrationTest {
         mockMvc.perform(get("/api/v1/auctions/investor/{investorId}", "investor-query")
                         .header("X-User-Id", "investor-query"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')]").exists());
+                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')]").exists())
+                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')].myInvestments[0].amount")
+                        .value(org.hamcrest.Matchers.contains(500.0)))
+                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')].myInvestments[0].investorId")
+                        .value(org.hamcrest.Matchers.contains("investor-query")));
+
+        mockMvc.perform(get("/api/v1/auctions/{auctionId}", auctionId.uuid()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.myInvestments").doesNotExist());
 
         mockMvc.perform(get("/api/v1/auctions/investor/{investorId}", "investor-query")
                         .header("X-User-Id", "someone-else"))
@@ -350,6 +365,14 @@ class AuctionFinancialFlowIntegrationTest {
                 .filter(event -> event.auctionId().equals(auctionId.uuid()))
                 .toList();
         assertThat(fullyFundedEvents).hasSize(1);
+        // Who is owed what travels with the fact, so Finance can pay the MYPE from it alone.
+        var funded = fullyFundedEvents.getFirst();
+        assertThat(funded.invoiceId()).isEqualTo("invoice-events");
+        assertThat(funded.mypeId()).isEqualTo("mype-events");
+        assertThat(funded.currency()).isEqualTo("PEN");
+        assertThat(funded.fundedAmount()).isEqualByComparingTo("9769.76");
+        assertThat(funded.mypeAdvance()).isEqualByComparingTo(quote.getMypeAdvance());
+        assertThat(funded.mypeAdvance()).isLessThan(funded.fundedAmount());
     }
 
     @Test

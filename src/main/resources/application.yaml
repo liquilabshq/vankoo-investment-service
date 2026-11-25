@@ -89,6 +89,12 @@ vankoo:
         USD: ${INVESTMENT_MINIMUM_USD:15.00}
     lifecycle:
       expiration-check-delay: ${INVESTMENT_EXPIRATION_CHECK_DELAY:PT1M}
+    finance:
+      # Finance directo, no el gateway: es una llamada entre servicios para debitar la
+      # billetera del inversionista al comprar una participacion. En Docker y en la nube
+      # se sobreescribe con FINANCE_SERVICE_URL.
+      base-url: ${FINANCE_SERVICE_URL:http://localhost:8083}
+      timeout: ${FINANCE_SERVICE_TIMEOUT:PT5S}
     outbox:
       publish-delay: ${INVESTMENT_OUTBOX_PUBLISH_DELAY:PT1S}
       cleanup-delay: ${INVESTMENT_OUTBOX_CLEANUP_DELAY:PT1H}

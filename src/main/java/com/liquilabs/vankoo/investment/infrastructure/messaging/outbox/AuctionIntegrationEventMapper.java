@@ -75,7 +75,10 @@ public class AuctionIntegrationEventMapper {
         if (event instanceof AuctionFullyFundedEvent value) {
             return new MappedAuctionIntegrationEvent(
                     value.auctionId(), AuctionLifecycleEventContract.AUCTION_FULLY_FUNDED, value.occurredAt(),
-                    new AuctionFullyFundedIntegrationEventData()
+                    new AuctionFullyFundedIntegrationEventData(
+                            value.invoiceId(), value.mypeId(), value.currency(), value.fundedAmount(),
+                            value.mypeAdvance()
+                    )
             );
         }
         if (event instanceof AuctionExpiredEvent value) {

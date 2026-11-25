@@ -50,7 +50,8 @@ class AuctionIntegrationEventMapperTest {
                         "auction-1", "partition-1", "investor-1", new BigDecimal("500.00"), "PEN",
                         new BigDecimal("500.00"), NOW
                 ),
-                new AuctionFullyFundedEvent("auction-1", NOW),
+                new AuctionFullyFundedEvent("auction-1", "invoice-1", "mype-1", "PEN",
+                        new BigDecimal("9884.00"), new BigDecimal("9848.60"), NOW),
                 new AuctionExpiredEvent("auction-1", List.of("tx-1"), NOW),
                 new AuctionCancelledEvent("auction-1", "cancelled", List.of("tx-2"), NOW),
                 new AuctionClosedEvent("auction-1", "close-tx", NOW)

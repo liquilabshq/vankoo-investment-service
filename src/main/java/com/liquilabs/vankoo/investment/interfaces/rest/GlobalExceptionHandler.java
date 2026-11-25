@@ -2,6 +2,8 @@ package com.liquilabs.vankoo.investment.interfaces.rest;
 
 import com.liquilabs.vankoo.investment.domain.exceptions.ActiveQuoteNotFoundException;
 import com.liquilabs.vankoo.investment.domain.exceptions.AuctionNotFoundException;
+import com.liquilabs.vankoo.investment.domain.exceptions.InsufficientBalanceException;
+import com.liquilabs.vankoo.investment.domain.exceptions.WalletUnavailableException;
 import com.liquilabs.vankoo.investment.domain.exceptions.UnauthorizedAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ActiveQuoteNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleNoActiveQuote(ActiveQuoteNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+    }
+
+    /**
+     * The two answers of buying a share that come from the wallet. Unlike the rest of
+     * this advice they carry a {@code code}, the same one Finance uses, so a client can
+     * tell "top up" from "try again" without reading English.
+     */
+    @ExceptionHandler(InsufficientBalanceException.class)
+    public ResponseEntity<Map<String, String>> handleInsufficientBalance(InsufficientBalanceException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", e.getMessage(), "code", InsufficientBalanceException.CODE));
+    }
+
+    @ExceptionHandler(WalletUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleWalletUnavailable(WalletUnavailableException e) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("message", e.getMessage(), "code", WalletUnavailableException.CODE));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

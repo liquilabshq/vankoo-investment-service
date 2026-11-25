@@ -386,27 +386,9 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
             return partition;
         }
 
-        if (status != AuctionStatus.PUBLISHED && status != AuctionStatus.FUNDING) {
-            throw new IllegalStateException("Auction is not accepting investments");
-        }
-        if (expiresAt == null || !now.isBefore(expiresAt)) {
-            throw new IllegalStateException("Auction funding window has expired");
-        }
-        if (amount.currency() != targetAmount.currency()) {
-            throw new IllegalArgumentException("Investment currency must match the auction currency");
-        }
-        if (amount.amount().signum() <= 0) {
-            throw new IllegalArgumentException("Investment amount must be positive");
-        }
-
+        ensureAcceptsInvestment(amount, minimumAmount, now);
         Money remaining = targetAmount.subtract(currentFunding);
-        if (amount.isGreaterThan(remaining)) {
-            throw new IllegalArgumentException("Investment amount exceeds the remaining funding target");
-        }
         boolean completesAuction = amount.amount().compareTo(remaining.amount()) == 0;
-        if (amount.amount().compareTo(minimumAmount) < 0 && !completesAuction) {
-            throw new IllegalArgumentException("Investment amount is below the minimum for " + amount.currency());
-        }
 
         AuctionFinancialQuote quote = acceptedQuote();
         BigDecimal participationPct = amount.amount()
@@ -450,9 +432,44 @@ public class Auction extends AbstractAggregateRoot<Auction> implements Persistab
 
         if (isFunded()) {
             status = AuctionStatus.FULLY_FUNDED;
-            registerEvent(new AuctionFullyFundedEvent(id.uuid(), now));
+            registerEvent(new AuctionFullyFundedEvent(
+                    id.uuid(), invoiceId.uuid(), mypeId.uuid(), targetAmount.currency().name(),
+                    targetAmount.amount(), quote.getMypeAdvance(), now
+            ));
         }
         return partition;
+    }
+
+    /**
+     * Every rule a new investment must pass, checked without changing anything.
+     *
+     * <p>Public so the application can ask before it takes the investor's money:
+     * paying for a share the auction is about to refuse would leave a debit with no
+     * share. {@link #addInvestment} runs the same checks again, so the two can never
+     * drift.
+     */
+    public void ensureAcceptsInvestment(Money amount, BigDecimal minimumAmount, Instant now) {
+        if (status != AuctionStatus.PUBLISHED && status != AuctionStatus.FUNDING) {
+            throw new IllegalStateException("Auction is not accepting investments");
+        }
+        if (expiresAt == null || !now.isBefore(expiresAt)) {
+            throw new IllegalStateException("Auction funding window has expired");
+        }
+        if (amount.currency() != targetAmount.currency()) {
+            throw new IllegalArgumentException("Investment currency must match the auction currency");
+        }
+        if (amount.amount().signum() <= 0) {
+            throw new IllegalArgumentException("Investment amount must be positive");
+        }
+
+        Money remaining = targetAmount.subtract(currentFunding);
+        if (amount.isGreaterThan(remaining)) {
+            throw new IllegalArgumentException("Investment amount exceeds the remaining funding target");
+        }
+        boolean completesAuction = amount.amount().compareTo(remaining.amount()) == 0;
+        if (amount.amount().compareTo(minimumAmount) < 0 && !completesAuction) {
+            throw new IllegalArgumentException("Investment amount is below the minimum for " + amount.currency());
+        }
     }
 
     public void close(String transactionId, Instant now) {

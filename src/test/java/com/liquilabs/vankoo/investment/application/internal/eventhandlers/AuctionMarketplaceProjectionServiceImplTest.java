@@ -96,7 +96,7 @@ class AuctionMarketplaceProjectionServiceImplTest {
         assertThat(funding.isMarketplaceVisible()).isTrue();
 
         project(event(4, AuctionLifecycleEventContract.AUCTION_FULLY_FUNDED,
-                new AuctionFullyFundedIntegrationEventData()));
+                new AuctionFullyFundedIntegrationEventData(null, null, null, null, null)));
 
         AuctionMarketplaceViewEntity completed = view();
         assertThat(completed.getStatus()).isEqualTo(AuctionStatus.FULLY_FUNDED);
