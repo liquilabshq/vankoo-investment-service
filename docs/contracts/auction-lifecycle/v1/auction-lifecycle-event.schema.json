@@ -323,7 +323,15 @@
       "required": ["partitionId", "addedAmount", "currentFunding"],
       "properties": {
         "partitionId": { "$ref": "#/$defs/id" },
+        "investorId": {
+          "$ref": "#/$defs/id",
+          "description": "Inversionista que compró la participación. Opcional en v1: los eventos publicados antes no lo traen."
+        },
         "addedAmount": { "$ref": "#/$defs/money" },
+        "currency": {
+          "type": "string",
+          "description": "Moneda de la participación (ISO 4217). Opcional en v1, como investorId."
+        },
         "currentFunding": { "$ref": "#/$defs/money" }
       }
     },
