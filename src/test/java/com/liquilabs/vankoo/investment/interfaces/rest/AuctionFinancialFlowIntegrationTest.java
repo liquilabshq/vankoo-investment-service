@@ -291,7 +291,15 @@ class AuctionFinancialFlowIntegrationTest {
         mockMvc.perform(get("/api/v1/auctions/investor/{investorId}", "investor-query")
                         .header("X-User-Id", "investor-query"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')]").exists());
+                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')]").exists())
+                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')].myInvestments[0].amount")
+                        .value(org.hamcrest.Matchers.contains(500.0)))
+                .andExpect(jsonPath("$[?(@.auctionId=='" + auctionId.uuid() + "')].myInvestments[0].investorId")
+                        .value(org.hamcrest.Matchers.contains("investor-query")));
+
+        mockMvc.perform(get("/api/v1/auctions/{auctionId}", auctionId.uuid()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.myInvestments").doesNotExist());
 
         mockMvc.perform(get("/api/v1/auctions/investor/{investorId}", "investor-query")
                         .header("X-User-Id", "someone-else"))

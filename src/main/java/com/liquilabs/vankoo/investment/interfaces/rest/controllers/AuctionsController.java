@@ -158,14 +158,15 @@ public class AuctionsController {
     }
 
     @GetMapping("/investor/{investorId}")
-    @Operation(summary = "List auctions an investor has participated in")
+    @Operation(summary = "List auctions an investor has participated in, with their own investments in each (myInvestments)")
     public List<AuctionDetailsResource> getAuctionsByInvestor(
             @PathVariable String investorId,
             @RequestHeader(value = "X-User-Id", required = false) String callerId
     ) {
         requireCaller(investorId, callerId);
-        return auctionQueryService.handle(new GetAuctionsByInvestorQuery(new UserId(investorId))).stream()
-                .map(AuctionDetailsResource::from)
+        var investor = new UserId(investorId);
+        return auctionQueryService.handle(new GetAuctionsByInvestorQuery(investor)).stream()
+                .map(auction -> AuctionDetailsResource.forInvestor(auction, investor))
                 .toList();
     }
 
